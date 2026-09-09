@@ -1,0 +1,62 @@
+# Browser-Automation-Skills 配置文件模板
+# 使用前请复制为 config/config.yaml 并填入真实值
+
+# 浏览器配置
+browser:
+  # 是否使用无头模式
+  headless: false
+  # 浏览器可执行文件路径；留空则使用 Playwright 自带浏览器
+  # executable_path: ''
+  # 窗口大小
+  window_size:
+    width: 1920
+    height: 1080
+  # 默认超时时间（毫秒）
+  timeout: 30000
+  # 浏览器类型 (chromium, firefox, webkit)
+  browser_type: chromium
+
+# 日志配置
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 截图配置
+screenshot:
+  output_dir: "./screenshots"
+  full_page: true
+
+# 视觉模型配置（用于多模态页面分析）
+vision:
+  # 视觉模型提供商（可选值：openai, dashscope, aliyun, qwen）
+  provider: "dashscope"
+  # 视觉模型名称
+  # OpenAI: gpt-4o, gpt-4o-mini, gpt-4-turbo
+  # DashScope: qwen-vl-max, qwen-vl-plus, qwen3-vl-plus
+  model: "qwen3-vl-plus"
+  # API 密钥（留空则使用环境变量 DASHSCOPE_API_KEY 或 OPENAI_API_KEY）
+  api_key: ""
+  # API 基础 URL
+  # DashScope: https://dashscope.aliyuncs.com/compatible-mode/v1
+  base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+  max_tokens: 1024
+  temperature: 0.1
+
+# Agent 配置（用于自然语言任务自动执行）
+agent:
+  # LLM 模型名称
+  model: "deepseek-v4-flash"
+  # API 密钥（留空则使用环境变量 OPENAI_API_KEY 或 DASHSCOPE_API_KEY）
+  api_key: ""
+  # API 基础 URL
+  base_url: "https://api.deepseek.com"
+  max_steps: 20
+  max_retries: 3
+  temperature: 0.1
+
+# 缓存配置
+cache:
+  dom_max_size: 50
+  dom_ttl: 60.0
+  llm_max_size: 200
+  llm_ttl: 3600.0

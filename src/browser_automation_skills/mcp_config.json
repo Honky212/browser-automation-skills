@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "browser-automation-skills": {
+      "command": "D:\\path\\to\\browser-automation-skills\\.venv\\Scripts\\python.exe",
+      "args": ["D:\\path\\to\\browser-automation-skills\\mcp_server.py", "--headed"],
+      "env": {
+        "PYTHONPATH": "D:\\path\\to\\browser-automation-skills",
+        "PLAYWRIGHT_BROWSERS_PATH": "C:\\Users\\<you>\\AppData\\Local\\ms-playwright"
+      }
+    }
+  }
+}
