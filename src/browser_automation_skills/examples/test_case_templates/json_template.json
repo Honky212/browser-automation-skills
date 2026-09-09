@@ -1,0 +1,24 @@
+{
+  "test_cases": [
+    {
+      "id": "TC_001",
+      "name": "示例测试用例",
+      "description": "这是一个示例测试用例模板",
+      "steps": "1. 导航到目标页面\n2. 执行操作1\n3. 执行操作2\n4. 验证结果",
+      "expected_result": "测试通过",
+      "priority": "high",
+      "setup_url": "https://example.com",
+      "timeout": 60
+    },
+    {
+      "id": "TC_002",
+      "name": "表单测试",
+      "description": "测试表单提交功能",
+      "steps": "1. 导航到表单页面\n2. 填写表单字段\n3. 点击提交按钮\n4. 验证提交成功",
+      "expected_result": "表单提交成功",
+      "priority": "medium",
+      "setup_url": "https://example.com/form",
+      "timeout": 45
+    }
+  ]
+}

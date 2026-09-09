@@ -1,0 +1,102 @@
+[
+  {
+    "id": "EC_01",
+    "name": "电商首页加载测试",
+    "description": "验证电商平台首页能正常打开并展示商品",
+    "steps": "打开电商首页，等待页面完全加载，验证页面标题包含'商城'或'购物'，验证页面上有商品图片或商品列表展示",
+    "expected_result": "首页正常加载，展示商品列表或轮播图",
+    "priority": "high",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 30
+  },
+  {
+    "id": "EC_02",
+    "name": "商品搜索功能测试",
+    "description": "验证商品搜索功能是否正常",
+    "steps": "打开电商首页，在搜索框中输入'手机'，点击搜索按钮，验证搜索结果页显示了手机相关商品，验证结果页有商品价格展示",
+    "expected_result": "搜索出手机相关商品，每件商品有价格和名称",
+    "priority": "high",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 45
+  },
+  {
+    "id": "EC_03",
+    "name": "商品详情页测试",
+    "description": "验证商品详情页信息完整",
+    "steps": "打开电商首页，搜索'蓝牙耳机'，点击第一个商品进入详情页，验证商品详情页包含：商品名称、价格、商品描述、加入购物车按钮",
+    "expected_result": "详情页商品信息完整，有加购按钮",
+    "priority": "high",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 50
+  },
+  {
+    "id": "EC_04",
+    "name": "用户登录测试",
+    "description": "验证电商平台的用户登录功能",
+    "steps": "打开电商登录页面，在用户名输入框输入 testuser@example.com，在密码输入框输入 Test123456，点击登录按钮，验证登录成功后页面显示用户昵称或'我的订单'入口",
+    "expected_result": "登录成功，页面显示用户相关信息",
+    "priority": "high",
+    "setup_url": "https://www.example-mall.com/login",
+    "timeout": 40
+  },
+  {
+    "id": "EC_05",
+    "name": "加入购物车测试",
+    "description": "验证商品加入购物车功能",
+    "steps": "打开电商首页，搜索'数据线'，点击第一个商品进入详情页，点击加入购物车按钮，验证购物车图标上出现数量角标或弹出'已加入购物车'提示",
+    "expected_result": "商品成功加入购物车，有视觉反馈",
+    "priority": "high",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 50
+  },
+  {
+    "id": "EC_06",
+    "name": "购物车管理测试",
+    "description": "验证购物车中商品数量修改功能",
+    "steps": "打开购物车页面，修改第一个商品数量为3，验证商品总价随之更新，验证页面底部显示正确的合计金额",
+    "expected_result": "数量修改后价格实时更新",
+    "priority": "medium",
+    "setup_url": "https://www.example-mall.com/cart",
+    "timeout": 40
+  },
+  {
+    "id": "EC_07",
+    "name": "收货地址管理测试",
+    "description": "验证用户新增收货地址的功能",
+    "steps": "登录后进入个人中心，找到地址管理，点击新增地址，填写收货人姓名'张三'、手机号'13800138000'、详细地址'北京市朝阳区xx路xx号'，点击保存，验证地址列表中出现了新添加的地址",
+    "expected_result": "新地址保存成功，出现在地址列表中",
+    "priority": "medium",
+    "setup_url": "https://www.example-mall.com/user/address",
+    "timeout": 50
+  },
+  {
+    "id": "EC_08",
+    "name": "商品分类导航测试",
+    "description": "验证商品分类导航功能",
+    "steps": "打开电商首页，点击商品分类中的'数码'类别，验证页面跳转到数码分类页面，验证页面上显示了数码类商品列表",
+    "expected_result": "数码分类页正常展示该类别商品",
+    "priority": "medium",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 40
+  },
+  {
+    "id": "EC_09",
+    "name": "商品筛选排序测试",
+    "description": "验证搜索结果的价格排序功能",
+    "steps": "打开电商首页，搜索'充电宝'，在搜索结果页选择按价格从低到高排序，验证排序后第一页商品价格确实是由低到高的",
+    "expected_result": "商品按价格升序排列",
+    "priority": "medium",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 45
+  },
+  {
+    "id": "EC_10",
+    "name": "页面底部信息测试",
+    "description": "验证页面底部链接和信息展示",
+    "steps": "打开电商首页，滚动到页面最底部，验证底部有客服联系方式或者帮助中心入口，验证底部有备案号或版权信息",
+    "expected_result": "底部信息完整，链接可点击",
+    "priority": "low",
+    "setup_url": "https://www.example-mall.com",
+    "timeout": 30
+  }
+]

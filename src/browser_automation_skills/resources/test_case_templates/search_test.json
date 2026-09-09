@@ -1,0 +1,102 @@
+[
+  {
+    "id": "SEARCH_01",
+    "name": "关键词搜索基本功能测试",
+    "description": "验证站内搜索基本功能",
+    "steps": "打开网站首页，在搜索框中输入'Python教程'，点击搜索按钮，验证搜索结果页显示了包含Python教程相关的结果",
+    "expected_result": "搜索结果页展示相关结果列表",
+    "priority": "high",
+    "setup_url": "https://example.com",
+    "timeout": 30
+  },
+  {
+    "id": "SEARCH_02",
+    "name": "空搜索测试",
+    "description": "验证不输入关键词直接搜索的情况",
+    "steps": "打开网站首页，不输入任何关键词，直接点击搜索按钮，验证页面保持不动或显示'请输入搜索关键词'的提示",
+    "expected_result": "提示输入搜索关键词或停留在当前页",
+    "priority": "high",
+    "setup_url": "https://example.com",
+    "timeout": 20
+  },
+  {
+    "id": "SEARCH_03",
+    "name": "搜索结果分页测试",
+    "description": "验证搜索结果的分页功能",
+    "steps": "打开网站首页，搜索'前端开发'，等待搜索结果出现，滚动页面到底部找到分页导航，点击第2页，验证页面显示了第2页的搜索结果且URL包含page参数",
+    "expected_result": "分页切换正常，每页展示不同结果",
+    "priority": "medium",
+    "setup_url": "https://example.com",
+    "timeout": 40
+  },
+  {
+    "id": "SEARCH_04",
+    "name": "无结果搜索测试",
+    "description": "验证搜索不存在内容时的提示",
+    "steps": "打开网站首页，在搜索框中输入'xyzabc123456不存在的关键词'，点击搜索按钮，验证页面显示'未找到相关结果'或'没有找到相关内容'的提示",
+    "expected_result": "显示无结果友好提示",
+    "priority": "medium",
+    "setup_url": "https://example.com",
+    "timeout": 25
+  },
+  {
+    "id": "SEARCH_05",
+    "name": "搜索历史记录测试",
+    "description": "验证搜索关键词的历史记录功能",
+    "steps": "打开网站首页，依次搜索'Java'、'Python'、'JavaScript'三个关键词，再次点击搜索框，验证搜索框下拉出现了最近的搜索历史列表",
+    "expected_result": "搜索历史记录显示最近搜索的关键词",
+    "priority": "low",
+    "setup_url": "https://example.com",
+    "timeout": 35
+  },
+  {
+    "id": "SEARCH_06",
+    "name": "搜索建议自动补全测试",
+    "description": "验证搜索框的自动建议功能",
+    "steps": "打开网站首页，在搜索框中输入'pyt'，暂停1秒等待，验证搜索框下拉出现了以'pyt'开头的搜索建议列表，如'python'、'pytorch'等",
+    "expected_result": "出现搜索建议下拉列表",
+    "priority": "medium",
+    "setup_url": "https://example.com",
+    "timeout": 25
+  },
+  {
+    "id": "SEARCH_07",
+    "name": "搜索结果高亮测试",
+    "description": "验证搜索结果中搜索词是否高亮显示",
+    "steps": "打开网站首页，搜索'性能优化'，查看搜索结果列表中是否将'性能优化'这四个字做了加粗或高亮标记",
+    "expected_result": "搜索结果中的搜索关键词有高亮/加粗效果",
+    "priority": "low",
+    "setup_url": "https://example.com",
+    "timeout": 25
+  },
+  {
+    "id": "SEARCH_08",
+    "name": "特殊字符搜索测试",
+    "description": "验证搜索特殊字符时的表现",
+    "steps": "打开网站首页，在搜索框中输入'<script>alert(1)</script>'或包含SQL注入的搜索词，点击搜索按钮，验证页面正常显示搜索结果或空结果，且不会触发脚本执行",
+    "expected_result": "搜索安全，无XSS/SQL注入风险",
+    "priority": "high",
+    "setup_url": "https://example.com",
+    "timeout": 25
+  },
+  {
+    "id": "SEARCH_09",
+    "name": "超长关键词搜索测试",
+    "description": "验证输入超长关键词搜索的表现",
+    "steps": "打开网站首页，在搜索框中输入一段超过200个字符的超长文本，点击搜索按钮，验证页面不会崩溃，要么显示无结果，要么截取前N个字符进行搜索",
+    "expected_result": "页面不崩溃，有合理提示",
+    "priority": "low",
+    "setup_url": "https://example.com",
+    "timeout": 25
+  },
+  {
+    "id": "SEARCH_10",
+    "name": "搜索结果排序切换测试",
+    "description": "验证搜索结果的不同排序方式",
+    "steps": "打开网站首页，搜索'教程'，在搜索结果页找到排序选项下拉菜单，依次切换为'按时间排序''按相关度排序'，验证每种排序下的结果顺序确实发生了变化",
+    "expected_result": "不同排序方式下结果顺序合理变化",
+    "priority": "medium",
+    "setup_url": "https://example.com",
+    "timeout": 40
+  }
+]

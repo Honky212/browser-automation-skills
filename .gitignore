@@ -1,0 +1,60 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+.pytest_cache/
+
+# ===== 虚拟环境 =====
+myvenv/
+.venv/
+venv/
+env/
+
+# ===== 构建产物 =====
+dist/
+*.whl
+*.zip
+
+# ===== Playwright 浏览器二进制 =====
+playwright-browsers/
+
+# ===== 本地配置（含真实 API 密钥，切勿提交！只提交 config.template.yaml）=====
+config/config.yaml
+config.yaml
+
+# ===== 运行时产物 =====
+screenshots/
+report/
+test_case/
+batch_report.md
+test_cases_smoke.json
+*.log
+
+# ===== IDE / 工具本地目录 =====
+.workbuddy/
+.claude/
+.gitnexus/
+.vscode/
+.idea/
+
+# ===== 临时调试脚本 =====
+_verify_*.py
+_build_*.py
+_diff_*.py
+_unpack_*.py
+repack.py
+verify_whl.py
+
+# ===== 个人笔记（含本地路径信息）=====
+修改*.txt
+
+# ===== 内容资产（推广文章/百科，默认不进入代码仓库；如需上传可删除下面几行）=====
+selling-project/
+wiki-codes/
+wiki-docs/
+
+# ===== 售卖材料（含定价/销售话术，不应进入开源仓库）=====
+src/browser_automation_skills/resources/buyer_welcome_email.md
+src/browser_automation_skills/resources/detail_page_9images.md

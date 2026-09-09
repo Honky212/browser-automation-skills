@@ -1,0 +1,102 @@
+[
+  {
+    "id": "LOGIN_01",
+    "name": "正常登录测试",
+    "description": "使用正确的用户名和密码登录",
+    "steps": "打开登录页面，在用户名输入框输入 admin@test.com，在密码输入框输入 Admin123!@#，点击登录按钮，验证登录成功后跳转到首页或显示欢迎消息",
+    "expected_result": "登录成功，跳转到首页显示用户信息",
+    "priority": "high",
+    "setup_url": "https://example.com/login",
+    "timeout": 30
+  },
+  {
+    "id": "LOGIN_02",
+    "name": "空用户名登录测试",
+    "description": "验证不填写用户名时的登录校验",
+    "steps": "打开登录页面，不填写用户名，在密码框输入任意密码，点击登录按钮，验证页面显示'请输入用户名'或类似错误提示",
+    "expected_result": "显示用户名不能为空的提示",
+    "priority": "high",
+    "setup_url": "https://example.com/login",
+    "timeout": 30
+  },
+  {
+    "id": "LOGIN_03",
+    "name": "空密码登录测试",
+    "description": "验证不填写密码时的登录校验",
+    "steps": "打开登录页面，在用户名输入框输入 admin@test.com，不填写密码，点击登录按钮，验证页面显示'请输入密码'或类似错误提示",
+    "expected_result": "显示密码不能为空的提示",
+    "priority": "high",
+    "setup_url": "https://example.com/login",
+    "timeout": 30
+  },
+  {
+    "id": "LOGIN_04",
+    "name": "错误密码登录测试",
+    "description": "使用错误密码登录，验证错误提示",
+    "steps": "打开登录页面，在用户名输入框输入 admin@test.com，在密码输入框输入 WrongPassword123，点击登录按钮，验证页面显示'用户名或密码错误'或'登录失败'的提示",
+    "expected_result": "显示用户名或密码错误的提示信息",
+    "priority": "high",
+    "setup_url": "https://example.com/login",
+    "timeout": 30
+  },
+  {
+    "id": "LOGIN_05",
+    "name": "记住密码功能测试",
+    "description": "验证勾选'记住我'后的登录体验",
+    "steps": "打开登录页面，输入用户名 admin@test.com，输入密码 Admin123!@#，勾选'记住我'或'自动登录'复选框，点击登录按钮，验证登录成功，刷新页面或重新打开后验证是否仍保持登录状态",
+    "expected_result": "勾选记住我后，关闭浏览器重开能保持登录",
+    "priority": "medium",
+    "setup_url": "https://example.com/login",
+    "timeout": 45
+  },
+  {
+    "id": "LOGIN_06",
+    "name": "密码显示隐藏切换测试",
+    "description": "验证密码输入框的显示/隐藏切换功能",
+    "steps": "打开登录页面，在密码输入框输入一个测试密码，点击密码框旁的眼睛图标或显示密码按钮，验证密码以明文显示，再次点击同一个按钮，验证密码恢复为密文",
+    "expected_result": "密码显示/隐藏切换功能正常",
+    "priority": "medium",
+    "setup_url": "https://example.com/login",
+    "timeout": 25
+  },
+  {
+    "id": "LOGIN_07",
+    "name": "登录页忘记密码链接测试",
+    "description": "验证忘记密码链接功能",
+    "steps": "打开登录页面，点击'忘记密码'或'找回密码'链接，验证页面跳转到密码重置页面，验证密码重置页有邮箱或手机号输入框和提交按钮",
+    "expected_result": "忘记密码链接能正常跳转",
+    "priority": "medium",
+    "setup_url": "https://example.com/login",
+    "timeout": 25
+  },
+  {
+    "id": "LOGIN_08",
+    "name": "登录页注册链接测试",
+    "description": "验证从登录页跳转到注册页",
+    "steps": "打开登录页面，点击'注册账号'或'立即注册'链接，验证页面跳转到注册页面，验证注册页面有用户名、密码、确认密码等输入框",
+    "expected_result": "注册链接正常跳转，注册表单完整",
+    "priority": "medium",
+    "setup_url": "https://example.com/login",
+    "timeout": 25
+  },
+  {
+    "id": "LOGIN_09",
+    "name": "连续失败登录锁定测试",
+    "description": "验证连续多次输错密码后账号是否被临时锁定",
+    "steps": "打开登录页面，连续5次使用错误密码尝试登录，验证第5次之后页面是否提示'账号已被锁定'或'请稍后再试'的安全提示",
+    "expected_result": "连续N次错误后触发安全锁定机制",
+    "priority": "medium",
+    "setup_url": "https://example.com/login",
+    "timeout": 60
+  },
+  {
+    "id": "LOGIN_10",
+    "name": "登出功能测试",
+    "description": "验证登录后的退出功能",
+    "steps": "先登录成功，在首页找到用户菜单或头像，点击退出登录按钮，验证页面跳转到登录页或首页且不再显示用户信息",
+    "expected_result": "退出后回到未登录状态",
+    "priority": "high",
+    "setup_url": "https://example.com/login",
+    "timeout": 30
+  }
+]

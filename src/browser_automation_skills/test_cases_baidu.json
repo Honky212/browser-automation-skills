@@ -1,0 +1,32 @@
+[
+  {
+    "id": "TC_01",
+    "name": "百度首页打开测试",
+    "description": "验证百度首页能正常打开",
+    "steps": "打开 https://www.baidu.com，等待页面加载完成，验证页面标题包含'百度'",
+    "expected_result": "页面标题包含'百度'",
+    "priority": "high",
+    "setup_url": "https://www.baidu.com",
+    "timeout": 30
+  },
+  {
+    "id": "TC_02",
+    "name": "百度搜索自动化测试",
+    "description": "验证百度搜索功能",
+    "steps": "打开 https://www.baidu.com，在搜索框中输入'自动化测试'，点击百度一下按钮，验证搜索结果页包含'自动化测试'相关的关键词",
+    "expected_result": "搜索结果页显示自动化测试相关内容",
+    "priority": "high",
+    "setup_url": "https://www.baidu.com",
+    "timeout": 60
+  },
+  {
+    "id": "TC_03",
+    "name": "百度搜索AI技术",
+    "description": "验证百度能搜索到AI技术相关内容",
+    "steps": "打开 https://www.baidu.com，在搜索框中输入'AI技术发展趋势'，点击百度一下按钮，验证搜索结果页标题包含'AI'或页面上有搜索结果",
+    "expected_result": "搜索结果页显示AI技术相关内容",
+    "priority": "medium",
+    "setup_url": "https://www.baidu.com",
+    "timeout": 60
+  }
+]

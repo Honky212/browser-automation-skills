@@ -1,0 +1,13 @@
+# Browser-Automation-Skills 依赖清单
+# 注意：mcp 必须使用 1.x 版本，2.0.0+ 移除了装饰器 API（@server.list_tools()）不兼容
+mcp>=1.0.0,<2.0.0
+# Playwright 版本与 Chromium 构建号严格绑定（不配置 executable_path 时）：
+#   - playwright 1.59.x → chromium-1223（Chrome 148.0.7778.96）
+#   - playwright 1.62.x → chromium-1234（Chrome 151.0.7922.34）
+# 复用本机已有浏览器有两种方式（详见 INSTALL.md）：
+#   方式A（推荐，免下载）：任意 playwright 版本 + config.yaml 中配置 browser.executable_path
+#   方式B：安装与已有浏览器构建号匹配的 playwright 版本
+playwright>=1.40.0
+pyyaml>=6.0
+openai>=1.0.0
+openpyxl>=3.0.0
