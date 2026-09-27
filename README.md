@@ -57,21 +57,24 @@ vision:
 ### 运行示例
 
 ```bash
-# 基本浏览器操作
-python examples/basic_test.py
+# 批量执行用例并生成报告（包内自带的可运行示例，开箱即跑：默认用例为确定性 actions）
+python -m browser_automation_skills.examples.batch_run_example
 
-# 表单测试
-python examples/form_test.py
+# 只解析用例、打印概要（不启动浏览器，可用于 CI 冒烟）
+python -m browser_automation_skills.examples.batch_run_example --parse-only
 
-# 报告生成
-python examples/report_demo.py
-
-# 增强 Skills 演示
-python examples/enhanced_skills_demo.py
-
-# 高级用法（自定义 Skill、Page Object、数据驱动）
-python examples/advanced_usage.py
+# 把录制文件固化成用例的 actions/assertions
+python -m browser_automation_skills.promote --cases my_cases.yaml --dry-run
 ```
+
+更多资料：
+
+| 文件 | 内容 |
+|------|------|
+| `examples/basic_workflow.md` | 基本工作流（Skill 直调） |
+| `examples/batch_testing.md` | 批量测试：命令行示例的参数说明、用例格式、熔断机制 |
+| `examples/visual_analysis.md` | 多模态视觉分析 |
+| `examples/test_case_templates/` | 用例模板：`yaml_template.yaml`、`json_template.json`、`test_cases_baidu.yaml/.json`、`structured_actions_demo.yaml`、`fallback_demo.yaml`、`login/search/ecommerce_test.json` |
 
 ## 项目结构
 

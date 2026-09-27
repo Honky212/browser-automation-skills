@@ -1,5 +1,59 @@
 # 批量测试示例
 
+## 可运行示例（推荐先跑这个）
+
+包内自带一个开箱即用的命令行示例，会启动浏览器、批量执行用例并生成 Markdown 报告：
+
+```bash
+# ① 开箱即跑：默认用例是纯确定性 actions（不调用 LLM，只需浏览器）
+python -m browser_automation_skills.examples.batch_run_example
+
+# ② 跑"自然语言 + 框架断言"的示例（需要 config 里配好 LLM）
+python -m browser_automation_skills.examples.batch_run_example \
+    --cases test_case_templates/test_cases_baidu.yaml --headed
+
+# ③ 只解析用例、打印概要（不启动浏览器，可用于 CI 冒烟）
+python -m browser_automation_skills.examples.batch_run_example --parse-only
+
+# ④ 指定用例文件与报告路径
+python -m browser_automation_skills.examples.batch_run_example \
+    --cases my_cases.yaml --report reports/my_report.md
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--cases` | 用例文件（`.yaml/.yml/.json/.xlsx`）；默认用包内示例用例 |
+| `--sheet` | Excel 用例的 sheet 名 |
+| `--report` | Markdown 报告输出路径（默认 `./batch_report.md`） |
+| `--config` | 配置文件路径（默认依次找 `./config/config.yaml`、`./config.yaml`） |
+| `--model` | 覆盖 config 里的 `agent.model` |
+| `--max-steps` / `--max-retries` | 每条用例的步数与连续失败上限（默认 20 / 3） |
+| `--headless` / `--headed` | 强制无头 / 有头模式（默认取 config） |
+| `--parse-only` | 只解析并打印用例概要，不启动浏览器 |
+| `--verbose` | 输出 DEBUG 日志 |
+
+示例输出：
+
+```text
+[INFO] 共解析到 2 条用例：
+  1. TC_DET_01  百度首页打开（确定性执行）
+     模式=确定性(actions)，actions=1，assertions=2，setup=https://www.baidu.com，timeout=60s
+[INFO] 配置文件: config\config.yaml
+[INFO] 浏览器: type=chromium headless=False
+
+========== 逐条结果 ==========
+  [PASS] TC_DET_01 百度首页打开（确定性执行） | 确定性(用例声明 actions) | 5.2s | 断言 2/2 | 步数 1
+  [PASS] TC_DET_02 百度搜索自动化测试（确定性执行） | 确定性(用例声明 actions) | 2.6s | 断言 2/2 | 步数 3
+
+========== 汇总 ==========
+总计: 2  通过: 2  失败: 0  通过率: 100.0%  耗时: 7.8s
+报告已写入: batch_report.md
+```
+
+> 该示例功能与 MCP 工具 `execute_batch_testcases` 等价，但不受 MCP 客户端 60s 请求超时限制
+> （批量执行通常需要数分钟）。
+> 退出码：全部通过 `0`，有用例失败 `1`，用法/配置/解析错误 `2`。
+
 ## 前置条件
 
 批量测试需要正确配置 `config.yaml` 中的 `agent` 段（model、api_key、base_url），

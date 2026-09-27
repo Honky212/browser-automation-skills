@@ -312,11 +312,17 @@ python -m browser_automation_skills.promote --cases <file> --overwrite --with-as
 # 单元测试（含新增稳定性用例）
 $env:PYTHONPATH='src'; python -m pytest src/browser_automation_skills/tests -q
 
-# 端到端：批量执行 + 生成报告（会体现“断言证据”与“执行模式与审计”章节）
-python test_case/run_batch_baidu.py
+# 端到端：批量执行 + 生成报告（包内自带的可运行示例；默认用例为确定性 actions，不调用 LLM）
+python -m browser_automation_skills.examples.batch_run_example
+
+# 只解析用例、打印概要（不启动浏览器）
+python -m browser_automation_skills.examples.batch_run_example --parse-only
 
 # 确定性执行演示（用例声明 actions + assertions，不调用 LLM）
 python test_case/run_batch_baidu.py test_case/test_cases_deterministic_demo.yaml test_case/reports/deterministic_demo_report.md
+
+# 录制 → 用例 YAML 固化
+python -m browser_automation_skills.promote --cases <cases.yaml> --dry-run
 ```
 
 相关测试：`tests/test_stability_features.py`（参数归一化、等待预算、硬超时、复合技能豁免、
