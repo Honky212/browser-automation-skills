@@ -10,10 +10,17 @@ build_wheel.py —— 从 src/browser_automation_skills 构建 wheel
 用法:
     python build_wheel.py                   # 使用 __init__.py 里的 __version__
     python build_wheel.py --version 1.5.5   # 临时覆盖版本号
-    python build_wheel.py --output dist     # 指定输出目录
+    python build_wheel.py --output dist     # 指定输出目录（默认 dist，可用 . 输出到项目根）
+    python build_wheel.py --keep-all        # 不排除任何目录（连 resources 一起打包）
+    python build_wheel.py --exclude docs    # 追加要排除的顶层目录（可重复）
+
+打包范围说明:
+    默认排除包内顶层 `resources/`（best_practices.md、test_case_templates/*.json 等
+    文档与示例素材，非运行时代码，也没有任何模块 import 它）。
+    被排除的目录只影响**该层同名目录**，不会误伤子包里的同名文件夹。
 
 构建产物:
-    dist/browser_automation_skills-<version>-py3-none-any.whl
+    <output>/browser_automation_skills-<version>-py3-none-any.whl
 """
 
 import argparse
@@ -32,6 +39,9 @@ DIST_DIR = ROOT / "dist"
 
 PACKAGE_NAME = "browser_automation_skills"
 DIST_INFO_PREFIX = "browser_automation_skills"  # dist-info 目录前缀（Name 归一化后）
+
+# 默认不打包的包内顶层目录（文档/示例素材，非运行时代码）
+DEFAULT_EXCLUDED_DIRS = ("resources",)
 
 # METADATA 元数据（Version 用占位符，长描述在结尾追加）
 METADATA_HEADER = """Metadata-Version: 2.4
@@ -108,9 +118,33 @@ def record_hash(data: bytes) -> str:
     return base64.urlsafe_b64encode(hashlib.sha256(data).digest()).rstrip(b"=").decode("ascii")
 
 
-def build_wheel(version: str, output_dir: Path) -> Path:
+def make_ignore(excluded_dirs):
+    """
+    生成 copytree 的 ignore 回调。
+
+    - 始终忽略缓存/编译产物；
+    - 仅当当前层就是包根目录时，才排除 excluded_dirs 里列出的顶层目录
+      （避免误伤子包中的同名目录）。
+    """
+    cache_ignore = shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo")
+    excluded = {str(name).strip().strip("/\\") for name in (excluded_dirs or ()) if str(name).strip()}
+    root = os.path.abspath(str(SRC_PKG))
+
+    def _ignore(dir_path, names):
+        ignored = set(cache_ignore(dir_path, names))
+        if excluded and os.path.abspath(str(dir_path)) == root:
+            ignored.update(name for name in names if name in excluded)
+        return ignored
+
+    return _ignore
+
+
+def build_wheel(version: str, output_dir: Path, excluded_dirs=None) -> Path:
     if not SRC_PKG.exists():
         raise SystemExit(f"源码目录不存在: {SRC_PKG}")
+
+    if excluded_dirs is None:
+        excluded_dirs = DEFAULT_EXCLUDED_DIRS
 
     output_dir.mkdir(parents=True, exist_ok=True)
     dist_info = f"{DIST_INFO_PREFIX}-{version}.dist-info"
@@ -119,13 +153,9 @@ def build_wheel(version: str, output_dir: Path) -> Path:
 
     staging = Path(tempfile.mkdtemp(prefix="whl_build_"))
     try:
-        # 1) 复制源码（排除缓存/编译产物）
+        # 1) 复制源码（排除缓存/编译产物，以及 excluded_dirs 指定的顶层目录）
         pkg_staging = staging / PACKAGE_NAME
-        shutil.copytree(
-            SRC_PKG,
-            pkg_staging,
-            ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo"),
-        )
+        shutil.copytree(SRC_PKG, pkg_staging, ignore=make_ignore(excluded_dirs))
 
         # 2) 生成 dist-info
         info_dir = staging / dist_info
@@ -170,13 +200,28 @@ def main():
     parser = argparse.ArgumentParser(description="从 src/browser_automation_skills 构建 wheel")
     parser.add_argument("--version", help="覆盖 __init__.py 中的版本号")
     parser.add_argument("--output", default=str(DIST_DIR), help="输出目录 (默认 dist)")
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=None,
+        help=f"追加要排除的顶层目录（可重复；默认排除 {', '.join(DEFAULT_EXCLUDED_DIRS)}）",
+    )
+    parser.add_argument(
+        "--keep-all", action="store_true", help="不排除任何目录（连 resources 一起打包）"
+    )
     args = parser.parse_args()
 
+    if args.keep_all:
+        excluded = ()
+    else:
+        excluded = tuple(DEFAULT_EXCLUDED_DIRS) + tuple(args.exclude or ())
+
     version = args.version or read_version()
-    wheel_path = build_wheel(version, Path(args.output))
+    wheel_path = build_wheel(version, Path(args.output), excluded_dirs=excluded)
     print(f"Built: {wheel_path}")
     print(f"Version: {version}")
     print(f"Size: {wheel_path.stat().st_size} bytes")
+    print(f"Excluded top-level dirs: {list(excluded) if excluded else '（无）'}")
 
 
 if __name__ == "__main__":
