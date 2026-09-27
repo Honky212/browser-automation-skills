@@ -1,0 +1,16 @@
+# 回退演示：actions 故意写一个不存在的索引，验证
+# agent.fallback_to_llm_on_action_failure = true 时能自动让 LLM 兜底
+- id: TC_FB_01
+  name: 确定性 actions 失败后回退 LLM（演示）
+  description: 确定性步骤失败 → 自动回退 LLM 规划，报告中标注“已回退”
+  steps: |
+    在百度搜索'自动化测试'，并验证搜索结果页
+  expected_result: url_contains('wd=') 与 page_contains_text('自动化测试') 均通过
+  priority: high
+  setup_url: https://www.baidu.com
+  actions:
+    - {skill: fill_by_index, params: {index: 999, value: "自动化测试"}}   # 故意失败：索引不存在
+  assertions:
+    - {skill: url_contains, params: {expected: "wd="}}
+    - {skill: page_contains_text, params: {text: "自动化测试"}}
+  timeout: 90

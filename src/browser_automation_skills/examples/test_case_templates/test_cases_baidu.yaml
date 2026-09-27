@@ -1,0 +1,45 @@
+- id: TC_01
+  name: 百度首页打开测试
+  description: 验证百度首页能正常打开：由用例自身完成导航，并以 title_contains/url_contains 断言判定通过
+  steps: |
+    1. 调用 navigate 技能打开 https://www.baidu.com（任务开始时页面为空白页 about:blank，必须显式导航）
+    2. 调用 title_contains 技能，expected='百度'，断言页面标题包含'百度'（必须实际执行该断言技能）
+    3. 调用 url_contains 技能，expected='baidu.com'，断言当前 URL 指向百度域名（必须实际执行该断言技能）
+    4. 仅当第 2、3 步断言均返回成功时，才可设置 status=done；禁止仅凭肉眼观察页面就判定任务完成
+    5. 任意断言失败时，必须设置 status=failed，并在 error 中说明失败原因
+  expected_result: title_contains('百度') 与 url_contains('baidu.com') 两个断言均执行并返回成功
+  priority: high
+  timeout: 30
+
+- id: TC_02
+  name: 百度搜索自动化测试
+  description: 验证百度搜索功能：用 DOM 索引定位搜索框与按钮，并以 url_contains/page_contains_text 断言判定通过
+  steps: |
+    1. 调用 get_dom_snapshot 技能获取页面可交互元素索引（百度首页搜索框无稳定 id，禁止使用未经确认的选择器如 #kw / #su）
+    2. 调用 fill_by_index 技能，在搜索输入框中输入'自动化测试'（选取快照中页面顶部的搜索输入框）
+    3. 调用 click_by_index 技能点击'百度一下'按钮；若元素不存在或报错 not attached（页面已自行跳转），不要重复点击，直接进入断言校验
+    4. 调用 url_contains 技能，expected='wd='，断言已跳转到搜索结果页（必须实际执行该断言技能）
+    5. 调用 page_contains_text 技能，text='自动化测试'，断言页面内容包含关键词（必须实际执行该断言技能）
+    6. 仅当第 4、5 步断言均返回成功时，才可设置 status=done；禁止仅凭肉眼观察页面就判定任务完成
+    7. 任意断言失败时，必须设置 status=failed，并在 error 中说明失败原因
+  expected_result: url_contains('wd=') 与 page_contains_text('自动化测试') 两个断言均执行并返回成功
+  priority: high
+  setup_url: https://www.baidu.com
+  timeout: 60
+
+- id: TC_03
+  name: 百度搜索AI技术
+  description: 验证百度能搜索到AI技术相关内容：用 DOM 索引定位搜索框与按钮，并以 url_contains/title_contains/element_exists 断言判定通过
+  steps: |
+    1. 调用 get_dom_snapshot 技能获取页面可交互元素索引（百度首页搜索框无稳定 id，禁止使用未经确认的选择器如 #kw / #su）
+    2. 调用 fill_by_index 技能，在搜索输入框中输入'AI技术发展趋势'（选取快照中页面顶部的搜索输入框）
+    3. 调用 click_by_index 技能点击'百度一下'按钮；若元素不存在或报错 not attached（页面已自行跳转），不要重复点击，直接进入断言校验
+    4. 调用 url_contains 技能，expected='wd='，断言已跳转到搜索结果页（必须实际执行该断言技能）
+    5. 调用 title_contains 技能，expected='百度搜索'，断言结果页标题包含'百度搜索'（必须实际执行该断言技能）
+    6. 调用 element_exists 技能，selector='#content_left'，断言搜索结果容器已渲染（必须实际执行该断言技能）
+    7. 仅当第 4、5、6 步断言全部返回成功时，才可设置 status=done；禁止仅凭肉眼观察页面就判定任务完成
+    8. 任意断言失败时，必须设置 status=failed，并在 error 中说明失败原因
+  expected_result: url_contains('wd=')、title_contains('百度搜索')、element_exists('#content_left') 三个断言均执行并返回成功
+  priority: medium
+  setup_url: https://www.baidu.com
+  timeout: 60
