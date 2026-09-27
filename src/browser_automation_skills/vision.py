@@ -313,6 +313,7 @@ class ScreenshotVisionSkill(BaseSkill):
 
     name = "screenshot_vision"
     description = "截取当前页面截图并返回 Base64 编码的图片"
+    timeout_exempt = True  # 全页截图/编码可能耗时，不套用技能级硬超时
 
     async def run(self, full_page: bool = False) -> SkillResult:
         page = await self.get_page()
@@ -335,6 +336,7 @@ class AnalyzePageSkill(BaseSkill):
 
     name = "analyze_page"
     description = "使用多模态视觉模型分析当前页面，回答关于页面内容的问题"
+    timeout_exempt = True  # 视觉模型调用耗时不固定，不套用技能级硬超时
 
     async def run(
         self,

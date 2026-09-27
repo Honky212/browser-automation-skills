@@ -1,0 +1,33 @@
+# 确定性执行示例：声明 actions + assertions，运行时**不调用 LLM 规划**
+# 适合“用例文案写得模糊/不稳定”但需要长期稳定回归的场景。
+- id: TC_DET_01
+  name: 百度首页打开（确定性执行）
+  description: 演示 actions 确定性执行：不经过 LLM，直接按序执行技能并由框架断言判定
+  steps: |
+    打开百度首页，校验标题与域名（文案仅作说明，实际按 actions 执行）
+  expected_result: title_contains('百度') 与 url_contains('baidu.com') 均通过
+  priority: high
+  setup_url: https://www.baidu.com
+  actions:
+    - {skill: navigate, params: {url: "https://www.baidu.com"}}
+  assertions:
+    - {skill: title_contains, params: {expected: "百度"}}
+    - {skill: url_contains, params: {expected: "baidu.com"}}
+  timeout: 60
+
+- id: TC_DET_02
+  name: 百度搜索自动化测试（确定性执行）
+  description: 演示 actions 完成搜索流程 + 框架断言判定
+  steps: |
+    在百度搜索自动化测试，并校验结果页（实际按 actions 的索引步骤执行）
+  expected_result: url_contains('wd=') 与 page_contains_text('自动化测试') 均通过
+  priority: high
+  setup_url: https://www.baidu.com
+  actions:
+    - {skill: get_dom_snapshot, params: {}}
+    - {skill: fill_by_index, params: {index: 13, value: "自动化测试"}}
+    - {skill: click_by_index, params: {index: 6}}
+  assertions:
+    - {skill: url_contains, params: {expected: "wd="}}
+    - {skill: page_contains_text, params: {text: "自动化测试"}}
+  timeout: 60

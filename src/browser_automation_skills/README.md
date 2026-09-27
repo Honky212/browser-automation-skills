@@ -252,6 +252,64 @@ print(result.description)
 ]
 ```
 
+## 用例执行模式：自然语言 / 确定性 actions / 录制回放
+
+**一条用例走哪条路，由「用例文件 + 配置」决定，不由大模型自己决定。** 判定优先级：
+
+| 优先级 | 触发条件 | 执行方式 | 是否调用 LLM |
+|--------|----------|----------|--------------|
+| **1** | 用例里声明了非空 `actions` | 按 `actions` 顺序执行 → 再执行 `assertions` 判定 | **❌ 不调用** |
+| **2** | 无 `actions`，且 `agent.replay_recorded: true`，且存在 `recorded_actions/<用例ID>.actions.yaml` | 回放录制动作（含锚点重解析）→ 再执行 `assertions` 判定 | **❌ 不调用** |
+| **3** | 以上都不满足 | `steps` 自然语言交给 LLM 逐步规划；若声明了 `assertions`，框架最后强制执行并判定 | ✅ 调用 |
+
+报告会明确写出每条用例实际走了哪条路（`## 执行模式与审计` 章节）：
+
+```text
+- TC_01: 执行模式: LLM 规划；已录制动作: ./recorded_actions/TC_01.actions.yaml
+- TC_03: 执行模式: 确定性执行（来源：用例声明 actions，不调用 LLM）
+```
+
+```yaml
+# 模式 A：自然语言（判定仍由框架断言负责，措辞模糊也不会“假通过”）
+- id: TC_01
+  steps: "打开百度首页并验证标题包含'百度'"
+  assertions:
+    - {skill: title_contains, params: {expected: "百度"}}
+
+# 模式 B：确定性 actions（不调用 LLM，推荐用于关键回归）
+- id: TC_03
+  steps: "搜索 AI技术发展趋势"          # 仅作可读说明
+  actions:
+    - {skill: get_dom_snapshot, params: {}}
+    - {skill: fill_by_index,    params: {index: 13, value: "AI技术发展趋势"}}
+    - {skill: click_by_index,   params: {index: 6}}
+  assertions:
+    - {skill: url_contains,   params: {expected: "wd="}}
+    - {skill: title_contains, params: {expected: "百度搜索"}}
+```
+
+```yaml
+# 模式 C：录制回放（模式 A 跑通后自动生成 actions 草稿，人工 review 后固化）
+agent:
+  record_actions: true      # 成功后录制到 recorded_actions/<用例ID>.actions.yaml
+  replay_recorded: false    # 人工确认后置 true，已录制用例走确定性回放
+  fallback_to_llm_on_action_failure: false   # 确定性失败时是否回退 LLM（默认 false，严格确定性）
+```
+
+回退开启后，报告会明确标注：`确定性执行（来源：用例声明 actions）失败 → ⚠️ 已回退 LLM 规划（回退原因: ...）`。
+
+### 固化：`python -m browser_automation_skills.promote`
+
+```bash
+python -m browser_automation_skills.promote --cases <cases.yaml> --dry-run              # 先看 diff
+python -m browser_automation_skills.promote --cases <cases.yaml> --with-assertions      # 原地固化（自动 .bak）
+```
+
+把 `recorded_actions/<用例ID>.actions.yaml` 写进用例文件的 `actions`（可选 `assertions`），
+取代人工手抄；`execute_js` 等 audit 步骤照常固化（仅加注释标注 + 汇总告警，**不禁用**）。
+
+详见包内文档 `browser_automation_skills/docs/stability_and_gates.md`。
+
 ## 运行测试
 
 ```bash

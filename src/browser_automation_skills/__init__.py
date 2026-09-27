@@ -1,6 +1,6 @@
 """Browser-Automation-Skills - 自动化测试 Skills 框架"""
 
-__version__ = "1.5.4"
+__version__ = "1.5.5"
 from .base import BaseSkill, SkillResult
 from .manager import SkillManager
 from .reporter import TestReporter
@@ -212,12 +212,38 @@ def create_manager(browser_context=None, config=None) -> SkillManager:
     """
     manager = SkillManager(browser_context=browser_context, config=config)
 
-    # 默认重试配置：全局可覆盖
+    # 技能级重试 + 超时预算（可通过 config.yaml 的 skill_retry / skill_timeout 段覆盖）
+    #
+    # 背景：技能级重试与 wait_for_selector 内部重试是**相乘**关系
+    # （3 × 3 × 单次 timeout），一个不存在的元素会白等近 1 分钟。
+    # 这里把两者都降下来，并给选择器等待加总预算，避免长时间空转。
+    cfg = config or {}
+    retry_cfg = cfg.get("skill_retry", {}) or {}
+    timeout_cfg = cfg.get("skill_timeout", {}) or {}
+
     manager._retry_settings = {
-        "max_attempts": 3,
-        "backoff": 1.0,
-        "retry_on": ["timeout", "timed out", "not found", "failed to", "timeout waiting"]
+        "max_attempts": int(retry_cfg.get("max_attempts", 2)),
+        "backoff": float(retry_cfg.get("backoff", 0.5)),
+        "retry_on": list(
+            retry_cfg.get("retry_on")
+            or ["timeout", "timed out", "not found", "failed to", "timeout waiting"]
+        ),
     }
+    manager._timeout_settings = {
+        # 单个技能单次执行的硬超时（秒），<=0 表示不限制
+        "skill_timeout": float(timeout_cfg.get("per_skill_seconds", 30)),
+        # 单个选择器等待的总预算（秒），<=0 表示不限制
+        "selector_wait_budget": float(timeout_cfg.get("selector_wait_budget_seconds", 6.0)),
+        # 单次 wait_for_selector 的超时（毫秒）
+        "selector_timeout_ms": int(timeout_cfg.get("selector_timeout_ms", 3000)),
+        # 豁免硬超时/整段重跑的复合技能（批量执行、Agent 执行、视觉分析等）
+        "exempt_skills": list(
+            timeout_cfg.get("exempt_skills") or BaseSkill.DEFAULT_TIMEOUT_EXEMPT_SKILLS
+        ),
+    }
+
+    # 技能策略：allow | audit | deny（audit 表示“允许但记录”，如 execute_js 这类 UI 降级手段）
+    manager.set_skill_policy(cfg.get("skill_policy"))
 
     # 注册所有内置 Skills
     all_skills = [

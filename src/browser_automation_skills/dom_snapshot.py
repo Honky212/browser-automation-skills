@@ -9,6 +9,15 @@ from playwright.async_api import Page, ElementHandle
 from .base import BaseSkill, SkillResult
 
 
+def is_detached_error(error: Exception) -> bool:
+    """判断异常是否为“元素已失效/已不在 DOM 中”（页面跳转或重渲染导致）。"""
+    text = str(error).lower()
+    return any(
+        keyword in text
+        for keyword in ("not attached", "detached", "no node found", "element is not attached")
+    )
+
+
 @dataclass
 class ElementInfo:
     """单个可交互元素的信息"""
@@ -158,6 +167,57 @@ class DomSnapshotService:
             return await self.get_element_by_skill_id(page, el_info.skill_id)
         return None
 
+    async def relocate_element(self, page: Page, el_info: ElementInfo) -> Optional[ElementHandle]:
+        """
+        页面结构变化（DOM 被替换、元素失效）后的自愈式重定位。
+
+        依次尝试：
+        1. 重新注入 data-skill-id 后按索引/属性重新匹配同一元素；
+        2. 按元素 id 定位；
+        3. 按 tag + 文本 精确定位。
+
+        Returns:
+            重新定位到的元素句柄，找不到时返回 None
+        """
+        # 1) 重新抓取快照，按“索引 + 关键属性”匹配回同一个元素
+        try:
+            fresh_snapshot = await self.capture(page)
+            for candidate in fresh_snapshot.elements:
+                if (
+                    el_info.element_id
+                    and candidate.element_id == el_info.element_id
+                ) or (
+                    el_info.index == candidate.index
+                    and el_info.tag == candidate.tag
+                    and el_info.text == candidate.text
+                ):
+                    handle = await self.get_element_by_skill_id(page, candidate.skill_id)
+                    if handle:
+                        return handle
+        except Exception:
+            pass
+
+        # 2) 按元素 id
+        if el_info.element_id:
+            try:
+                handle = await page.query_selector(f'[id="{el_info.element_id}"]')
+                if handle:
+                    return handle
+            except Exception:
+                pass
+
+        # 3) 按 tag + 文本
+        if el_info.text and el_info.tag:
+            try:
+                for handle in await page.query_selector_all(el_info.tag):
+                    text = (await handle.inner_text() or "").strip()
+                    if text == el_info.text.strip():
+                        return handle
+            except Exception:
+                pass
+
+        return None
+
     # JavaScript 代码：收集元素信息
     _COLLECT_ELEMENTS_JS = """
     () => {
@@ -298,17 +358,49 @@ class ClickByIndexSkill(BaseSkill):
                 message=f"Element [{index}] is disabled: {el_info.tag} {el_info.text}"
             )
 
-        # 通过 skill-id 获取元素并点击
+        # 通过 skill-id 获取元素并点击（带“元素失效自愈”）
         element = await service.get_element_by_skill_id(page, el_info.skill_id)
-        if element:
-            await element.click()
+        healed = False
+
+        if element is None:
+            element = await service.relocate_element(page, el_info)
+            healed = element is not None
+
+        if element is not None:
+            try:
+                await element.click()
+            except Exception as e:
+                if not is_detached_error(e):
+                    return SkillResult(
+                        success=False,
+                        message=f"Failed to click element [{index}]: {str(e)}",
+                        error=str(e),
+                    )
+                # 页面已重渲染/跳转：重新定位后再点一次
+                element = await service.relocate_element(page, el_info)
+                if element is None:
+                    return SkillResult(
+                        success=False,
+                        message=(
+                            f"Element [{index}] became detached and could not be relocated "
+                            f"(page may have changed)"
+                        ),
+                        error=str(e),
+                    )
+                healed = True
+                await element.click()
+
             # 点击后页面可能变化，使缓存失效
             if hasattr(self.manager, '_dom_cache'):
                 await self.manager._dom_cache.invalidate(page)
+
+            message = f"Clicked element [{index}]: {el_info.tag} \"{el_info.text}\""
+            if healed:
+                message += " (元素失效后已自动重新定位)"
             return SkillResult(
                 success=True,
-                message=f"Clicked element [{index}]: {el_info.tag} \"{el_info.text}\"",
-                data={"index": index, "element": el_info.__dict__}
+                message=message,
+                data={"index": index, "element": el_info.__dict__, "relocated": healed},
             )
         else:
             return SkillResult(
@@ -344,15 +436,46 @@ class FillByIndexSkill(BaseSkill):
             )
 
         element = await service.get_element_by_skill_id(page, el_info.skill_id)
-        if element:
-            await element.fill(value)
+        healed = False
+
+        if element is None:
+            element = await service.relocate_element(page, el_info)
+            healed = element is not None
+
+        if element is not None:
+            try:
+                await element.fill(value)
+            except Exception as e:
+                if not is_detached_error(e):
+                    return SkillResult(
+                        success=False,
+                        message=f"Failed to fill element [{index}]: {str(e)}",
+                        error=str(e),
+                    )
+                # 页面已重渲染/跳转：重新定位后再填一次
+                element = await service.relocate_element(page, el_info)
+                if element is None:
+                    return SkillResult(
+                        success=False,
+                        message=(
+                            f"Element [{index}] became detached and could not be relocated"
+                        ),
+                        error=str(e),
+                    )
+                healed = True
+                await element.fill(value)
+
             # 填写后使缓存失效
             if hasattr(self.manager, '_dom_cache'):
                 await self.manager._dom_cache.invalidate(page)
+
+            message = f"Filled element [{index}] with \"{value}\""
+            if healed:
+                message += " (元素失效后已自动重新定位)"
             return SkillResult(
                 success=True,
-                message=f"Filled element [{index}] with \"{value}\"",
-                data={"index": index, "value": value}
+                message=message,
+                data={"index": index, "value": value, "element": el_info.__dict__, "relocated": healed},
             )
         else:
             return SkillResult(

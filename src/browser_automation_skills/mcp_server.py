@@ -398,6 +398,8 @@ class BrowserSkillServer:
             executable_path=executable_path,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             disable_automation=True,
+            # 让 config.yaml 的 browser.timeout 真正对页面操作生效
+            default_timeout=browser_config.get("timeout"),
         )
         self.browser_context = await self._launcher.launch()
         self.manager = create_manager(browser_context=self.browser_context, config=self.config)

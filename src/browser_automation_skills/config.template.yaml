@@ -54,6 +54,69 @@ agent:
   max_retries: 3
   temperature: 0.1
 
+  # ---------- 稳定性与判定严谨性 ----------
+  # 断言硬门禁：未执行任何断言类技能 / 最后一次断言失败 时，不允许判定为 done
+  require_assertion: true
+  # 被门禁拦截后，允许模型补救（补执行断言）的次数
+  assertion_gate_retries: 1
+  # 单步（单个技能调用）超时（秒），0 表示不限制
+  step_timeout: 60
+  # 用例级默认超时（秒）；用例文件里的 timeout 字段优先
+  case_timeout: 120
+  # LLM 规划调用失败 / 输出非法 JSON 时的重试次数
+  llm_retries: 3
+  # 每条用例使用全新页面，避免用例间状态污染
+  isolate_pages: true
+  # 用例失败后自动重跑次数（0=关闭；开启可抵抗抖动，但会掩盖真实缺陷）
+  retry_failed_cases: 0
+  # 成功用例的动作录制：生成 recorded_actions/<用例ID>.actions.yaml，供人工确认后固化为 actions
+  record_actions: false
+  # 录制回放：人工确认录制文件后再开启；开启后有关联录制文件的用例走确定性重放
+  replay_recorded: false
+  # 录制文件目录
+  record_dir: "./recorded_actions"
+  # actions 执行失败后是否继续执行后续动作（false = 失败即停）
+  continue_on_action_failure: false
+  # 确定性执行（actions/录制回放）失败后是否自动回退 LLM 规划
+  # true  = 更稳（失败会兜底），但会在报告中标注「已回退」，通过结果的可复现性下降
+  # false = 严格确定性：失败即失败（推荐用于 CI 门禁）
+  fallback_to_llm_on_action_failure: false
+  # 框架断言前的页面稳定等待（毫秒）：规避“URL 已变但标题/内容未更新”的竞态误判
+  assertion_settle_ms: 3000
+  # 框架断言的有限重试（“最终满足”语义，避免断言早于渲染而误判）
+  assertion_retries: 3
+  assertion_retry_interval_ms: 500
+
+# 技能策略：allow（默认）| audit（允许但记录并在报告中披露）| deny（禁用）
+# 说明：execute_js 常用于“UI 点不了”的降级场景，因此不建议 deny，而是 audit——
+#       使用后会在报告的“执行模式与审计”章节标注，便于人工评审
+skill_policy:
+  execute_js: audit
+
+# 技能级重试与超时（稳定性关键配置）
+# 注意：技能级重试与选择器内部重试是“相乘”关系，两者都放大就会造成长时间空转
+skill_retry:
+  # 单个技能失败后的重试次数（含首次执行）
+  max_attempts: 2
+  # 线性退避基数（秒）
+  backoff: 0.5
+  # 只有错误信息命中以下关键字才重试
+  retry_on: ["timeout", "timed out", "not found", "failed to", "timeout waiting"]
+
+skill_timeout:
+  # 单个技能单次执行的硬超时（秒），0 表示不限制
+  per_skill_seconds: 30
+  # 单个选择器等待的“总”时间预算（秒）：无论内部重试多少次，超过即放弃
+  selector_wait_budget_seconds: 6.0
+  # 单次 wait_for_selector 的超时（毫秒）
+  selector_timeout_ms: 3000
+  # 豁免硬超时与整段重跑的复合技能（这类技能自身耗时不可控）
+  exempt_skills:
+    - execute_task
+    - execute_batch_testcases
+    - analyze_page
+    - screenshot_vision
+
 # 缓存配置
 cache:
   dom_max_size: 50

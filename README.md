@@ -260,6 +260,194 @@ print(result.description)
 ]
 ```
 
+### YAML 格式（支持 `actions` / `assertions`）
+
+```yaml
+- id: TC_02
+  name: 百度搜索自动化测试
+  steps: "在百度搜索自动化测试并验证结果页"      # 自然语言，交给 LLM 规划
+  setup_url: https://www.baidu.com
+  timeout: 60
+  assertions:                                # 可选：由**框架**在最后强制执行并判定通过与否
+    - {skill: url_contains,       params: {expected: "wd="}}
+    - {skill: page_contains_text, params: {text: "自动化测试"}}
+
+- id: TC_03
+  name: 百度搜索AI技术（确定性执行）
+  steps: "搜索 AI技术发展趋势"                 # 仅作可读说明
+  setup_url: https://www.baidu.com
+  actions:                                   # 可选：声明后**完全不调用 LLM**，按序执行
+    - {skill: get_dom_snapshot, params: {}}
+    - {skill: fill_by_index,    params: {index: 13, value: "AI技术发展趋势"}}
+    - {skill: click_by_index,   params: {index: 6}}
+  assertions:
+    - {skill: url_contains,   params: {expected: "wd="}}
+    - {skill: title_contains, params: {expected: "百度搜索"}}
+```
+
+| 字段 | 作用 |
+|------|------|
+| `steps` | 自然语言步骤说明（模式 A 下由 LLM 逐步规划；模式 B/C 下仅作说明） |
+| `assertions` | 框架强制断言：LLM/actions 执行完后由框架执行，任一失败则用例不通过（判定与 LLM 解耦） |
+| `actions` | 确定性步骤：声明后不调用 LLM，按序执行（每步受 `step_timeout` 保护），随后执行 `assertions` |
+
+## 用例执行模式：自然语言 / 确定性 actions / 录制回放
+
+**一条用例走哪条路，由「用例文件 + 配置」决定，不由大模型自己决定。** 判定优先级如下：
+
+| 优先级 | 触发条件 | 执行方式 | 是否调用 LLM |
+|--------|----------|----------|--------------|
+| **1** | 用例里声明了非空 `actions` | 按 `actions` 顺序执行 → 再执行 `assertions` 判定 | **❌ 不调用** |
+| **2** | 没有 `actions`，且 `agent.replay_recorded: true`，且存在 `recorded_actions/<用例ID>.actions.yaml` | 回放录制动作（含锚点重解析）→ 再执行 `assertions` 判定 | **❌ 不调用** |
+| **3** | 以上都不满足 | `steps` 自然语言交给 LLM 逐步规划；若声明了 `assertions`，框架在最后强制执行并判定 | ✅ 调用 |
+
+实现位置：`BatchTestAgent._execute_single_case`（`declared_actions = case.actions` → 有则 `actions_source="case"`；
+否则读录制文件 → `actions_source="replay"`；都没有则 `mode="llm"`）。
+
+**报告里会明确写出每条用例实际走的是哪条路**，无需猜测：
+
+```text
+## 执行模式与审计
+
+- TC_01: 执行模式: LLM 规划；已录制动作: ./recorded_actions/TC_01.actions.yaml
+- TC_03: 执行模式: 确定性执行（来源：用例声明 actions，不调用 LLM）
+```
+
+### 怎么选？（经验规则）
+
+| 你的场景 | 建议模式 | 理由 |
+|----------|----------|------|
+| 早期探索 / 页面常变 / 步骤还不确定 | 自然语言 | 让 LLM 先跑通，成本最低 |
+| 关键回归，要求快且稳定 | 确定性 actions | 不调 LLM、无方差；实测 6~7 秒 vs 29~67 秒 |
+| 自然语言用例已跑通，想固化 | 先录制 → 人工 review → 固化成 actions | 自动生成 actions 草稿，省手写 |
+| 不允许"用 JS 绕过 UI 操作" | `skill_policy: {execute_js: deny}` | 硬禁（默认是 `audit`：允许但会在报告中披露） |
+
+> 混合用法：模式 A 也可以用 `assertions`。此时"怎么点、怎么填"由 LLM 规划，
+> 但"是否通过"由框架的断言决定——即使 `steps` 写得很模糊，也不会出现"假通过"。
+
+### 模式 A：自然语言（最省事）
+
+```yaml
+- id: TC_01
+  name: 百度首页打开测试
+  steps: "打开百度首页并验证标题包含'百度'"     # LLM 逐步规划
+  assertions:                                  # 判定交给框架
+    - {skill: title_contains, params: {expected: "百度"}}
+  timeout: 60
+```
+
+### 模式 B：确定性 actions（推荐用于长期回归）
+
+```yaml
+- id: TC_03
+  name: 百度搜索AI技术（确定性执行）
+  steps: "搜索 AI技术发展趋势"                   # 仅作说明，实际按 actions 执行
+  actions:
+    - {skill: get_dom_snapshot, params: {}}
+    - {skill: fill_by_index,    params: {index: 13, value: "AI技术发展趋势"}}
+    - {skill: click_by_index,   params: {index: 6}}
+  assertions:
+    - {skill: url_contains,   params: {expected: "wd="}}
+    - {skill: title_contains, params: {expected: "百度搜索"}}
+```
+
+- 完全不调用 LLM；失败即停（`agent.continue_on_action_failure: true` 可改为继续执行后续动作）
+- 索引会漂移？可用 `get_dom_snapshot` 先取快照，或直接写 `anchor`（见下）
+
+### 模式 C：录制回放（自动生成 actions 草稿）
+
+```yaml
+agent:
+  record_actions: true      # 自然语言跑成功后，自动录制到 recorded_actions/<用例ID>.actions.yaml
+  replay_recorded: false    # 人工 review 后置 true，即可让已录制用例走确定性回放
+  record_dir: "./recorded_actions"
+```
+
+录制文件形如（`anchor` 用于回放时重解析易漂移的索引）：
+
+```yaml
+id: TC_03
+recorded_at: '2026-09-28 00:01:36'
+recorded_from: llm
+actions:
+- skill: get_dom_snapshot
+  params: {}
+- skill: fill_by_index
+  params: {index: 13, value: AI技术发展趋势}
+  anchor: {element_id: chat-textarea, selector: '#chat-textarea', tag: textarea}
+- skill: click_by_index
+  params: {index: 6}
+  anchor: {element_id: chat-submit-button, selector: '#chat-submit-button', tag: button, text: 百度一下}
+```
+
+推荐工作流：**模式 A 跑通 → 框架录制 → 人工 review → 把 actions 固化进用例文件（模式 B）**。
+回放（`replay_recorded: true`）适合临时提速；页面大改版时它会失败并提示重新录制。
+
+### 回退：确定性失败时自动让 LLM 兜底（可选）
+
+```yaml
+agent:
+  fallback_to_llm_on_action_failure: true   # 默认 false（严格确定性）
+```
+
+- actions / 回放失败 → 自动改用 LLM 规划兜底，并把失败原因以 `[回退说明]` 前缀喂给模型
+  （告知"页面可能处于执行到一半的中间状态"）；
+- 报告中明确标注，**不会静默**：
+  `执行模式: 确定性执行（来源：用例声明 actions）失败 → ⚠️ 已回退 LLM 规划（回退原因: 步骤 1 失败: ...）`
+- 回退后的步骤记录会保留两阶段（`stage: deterministic` / `stage: llm`），便于复盘；
+- 取舍：更稳，但"通过"不再是纯确定性的。**CI 门禁建议保持 `false`**（严格确定性）；本地调试、生产巡检可设 `true`。
+
+### 固化：`python -m browser_automation_skills.promote`
+
+把 `recorded_actions/<用例ID>.actions.yaml` 一条命令写进用例文件的 `actions`（可选 `assertions`），
+取代"人工 review + 手抄 YAML"。
+
+```bash
+# 1) 先看 diff（不写盘）
+python -m browser_automation_skills.promote --cases test_case/test_cases_baidu.yaml --dry-run
+
+# 2) 连断言草稿一起固化到新文件（原文件不动，推荐先这样）
+python -m browser_automation_skills.promote --cases <file> --with-assertions --output <new_file>
+
+# 3) 原地固化（自动备份 <file>.bak；用例已有 actions 时需 --overwrite）
+python -m browser_automation_skills.promote --cases <file> --overwrite --with-assertions
+```
+
+| 参数 | 作用 |
+|------|------|
+| `--cases` | 用例文件（YAML） |
+| `--record-dir` | 录制文件目录（默认 `./recorded_actions`） |
+| `--output` | 输出到新文件（默认原地修改） |
+| `--dry-run` | 只打印 diff，不写盘 |
+| `--overwrite` | 覆盖用例已有的 `actions` / `assertions` |
+| `--with-assertions` | 连同录制里的断言草稿一起固化 |
+| `--no-backup` | 写盘前不生成 `.bak` 备份 |
+
+实现要点：
+
+- **绝不禁用任何技能**：录制里的 `execute_js` 等 audit 步骤**照常固化**（有些元素确实只能靠 JS 操作），
+  只在 YAML 里加注释标注 + 在汇总里告警，是否保留由人工 review 决定：
+  ```yaml
+      # ⚠️ 该步骤使用 audit 技能（execute_js）：会绕过真实 UI 操作——已允许使用，请 review 其必要性
+      - skill: execute_js
+        params: {script: document.querySelector('#su').click()}
+  ```
+- **只动 `actions:` / `assertions:` 两个字段块**：用例文件里其它字段、注释与排版原样保留（不整份重新序列化）；
+- 默认写前备份 `.bak`，`--dry-run` 先给 diff；固化后用例文件成为**唯一事实来源**
+  （可进版本管理、可 code review、可做 CI 门禁），不再依赖会被 gitignore 的运行时目录。
+
+完整闭环实测（同一批 3 条用例）：
+
+| 阶段 | 模式 | 结果 | 耗时 |
+|------|------|------|------|
+| ① 自然语言跑通（自动录制，含 anchor + 断言草稿） | LLM | 3/3 | 52.5s |
+| ② `promote --with-assertions --output <new>` | 离线工具 | 固化 3 条 | — |
+| ③ review 后跑固化文件 | 确定性、零 LLM | **3/3** | **约 10s** |
+
+> 注意：录制给的是**草稿**。若某次 LLM 是靠"副作用"过关（例如填写输入框后页面自动跳转，
+> 录制里就没有点击步骤），回放会被**断言**拦下——此时按 review 补上缺的步骤即可。
+> 这也是"固化 + 断言"组合最有价值的地方：**不粉饰、不假通过**。
+
 ## 运行测试
 
 ```bash

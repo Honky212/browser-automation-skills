@@ -25,6 +25,7 @@ class BrowserLauncher:
         executable_path: Optional[str] = None,
         user_agent: Optional[str] = None,
         disable_automation: bool = True,
+        default_timeout: Optional[int] = None,
     ):
         """
         初始化浏览器启动器
@@ -38,6 +39,8 @@ class BrowserLauncher:
             executable_path: 浏览器可执行文件路径（可选，不指定则用 Playwright 自带）
             user_agent: 自定义 User-Agent（可选）
             disable_automation: 是否添加 --disable-blink-features=AutomationControlled 参数
+            default_timeout: Playwright 默认超时（毫秒，对应 config.yaml 的 browser.timeout）；
+                             传入后对 context 内的所有操作生效
         """
         self.headless = headless
         self.viewport = viewport or {"width": 1920, "height": 1080}
@@ -46,6 +49,7 @@ class BrowserLauncher:
         self.executable_path = executable_path
         self.user_agent = user_agent
         self.disable_automation = disable_automation
+        self.default_timeout = default_timeout
 
         self._playwright = None
         self._browser: Optional[Browser] = None
@@ -88,9 +92,17 @@ class BrowserLauncher:
 
         self._context = await self._browser.new_context(**context_kwargs)
 
+        # 让 config.yaml 的 browser.timeout 真正生效（Playwright 默认操作超时）
+        if self.default_timeout and self.default_timeout > 0:
+            self._context.set_default_timeout(int(self.default_timeout))
+            try:
+                self._context.set_default_navigation_timeout(int(self.default_timeout))
+            except Exception:  # pragma: no cover - 兼容旧版 Playwright
+                pass
+
         logger.info(
-            "Browser launched: %s (headless=%s, executable_path=%s)",
-            self.browser_type, self.headless, self.executable_path,
+            "Browser launched: %s (headless=%s, executable_path=%s, default_timeout=%s)",
+            self.browser_type, self.headless, self.executable_path, self.default_timeout,
         )
         return self._context
 

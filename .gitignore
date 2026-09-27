@@ -28,6 +28,7 @@ config.yaml
 screenshots/
 report/
 test_case/
+recorded_actions/
 batch_report.md
 test_cases_smoke.json
 *.log
