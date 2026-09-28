@@ -1,6 +1,5 @@
 """测试 SkillResult 数据类和 BaseSkill 基类"""
 
-import asyncio
 import pytest
 from unittest.mock import MagicMock
 
@@ -46,7 +45,7 @@ class TestSkillResult:
 class TestBaseSkillExecute:
     """BaseSkill.execute 重试逻辑测试"""
 
-    def test_execute_success_no_retry(self, mock_browser_context, mock_page):
+    async def test_execute_success_no_retry(self, mock_browser_context, mock_page):
         """测试成功执行不重试"""
 
         class DummySkill(BaseSkill):
@@ -59,12 +58,12 @@ class TestBaseSkillExecute:
                 return SkillResult(success=True, message="ok")
 
         skill = DummySkill(mock_browser_context, page=mock_page)
-        result = asyncio.get_event_loop().run_until_complete(skill.execute())
+        result = await skill.execute()
 
         assert result.success is True
         assert DummySkill.call_count == 1
 
-    def test_execute_retry_on_timeout(self, mock_browser_context, mock_page):
+    async def test_execute_retry_on_timeout(self, mock_browser_context, mock_page):
         """测试超时错误时重试"""
 
         class FlakySkill(BaseSkill):
@@ -89,12 +88,12 @@ class TestBaseSkillExecute:
         skill.manager = mock_manager
         skill._retry_settings = mock_manager._retry_settings
 
-        result = asyncio.get_event_loop().run_until_complete(skill.execute())
+        result = await skill.execute()
 
         assert result.success is True
         assert FlakySkill.call_count == 3
 
-    def test_execute_no_retry_on_unmatched_error(self, mock_browser_context, mock_page):
+    async def test_execute_no_retry_on_unmatched_error(self, mock_browser_context, mock_page):
         """测试非匹配错误不重试"""
 
         class FailSkill(BaseSkill):
@@ -112,7 +111,7 @@ class TestBaseSkillExecute:
         skill.manager = mock_manager
         skill._retry_settings = mock_manager._retry_settings
 
-        result = asyncio.get_event_loop().run_until_complete(skill.execute())
+        result = await skill.execute()
 
         assert result.success is False
         assert FailSkill.call_count == 1  # 不匹配 retry_on，不重试

@@ -6,7 +6,13 @@ from typing import Any, Optional, Dict, List
 
 from playwright.async_api import Page, Download
 
-from .base import BaseSkill, SkillResult
+from .base import (
+    ArtifactPathError,
+    BaseSkill,
+    SkillResult,
+    ensure_within_roots,
+    resolve_allowed_roots,
+)
 
 # 默认截图目录
 DEFAULT_SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "screenshots")
@@ -117,48 +123,65 @@ class ScreenshotSkill(BaseSkill):
     name = "screenshot"
     description = "截取当前页面截图"
 
-    def _resolve_screenshot_dir(self) -> str:
+    def _resolve_screenshot_dir(self, output_dir: Optional[str] = None) -> str:
         """
         解析截图保存目录。
 
         优先级：
-        1. config.yaml 里 screenshot.output_dir（通过 manager.config 读取）
-        2. 模块常量 DEFAULT_SCREENSHOT_DIR（兼容旧行为）
+        1. 调用方显式传入的 output_dir（批量执行时由被测项目目录派生）
+        2. config.yaml 里 screenshot.output_dir（通过 manager.config 读取）
+        3. 模块常量 DEFAULT_SCREENSHOT_DIR（兼容旧行为）
 
-        output_dir 若为相对路径，按 MCP server 的 cwd 解析
-        （即 mcp.json 里配置的 cwd，通常是项目根目录）。
+        相对路径一律按 MCP server 的 cwd 解析（即 mcp 配置里的 cwd），与旧行为一致。
+        显式传入的 output_dir 必须落在允许的工作区内（见 base.resolve_allowed_roots）；
+        越界时抛 ArtifactPathError，调用方不得创建目录或写入文件。
         """
+        if output_dir:
+            config = getattr(self.manager, "config", None) or {}
+            roots = resolve_allowed_roots(config)
+            return ensure_within_roots(output_dir, roots, label="screenshot.output_dir")
+
         cfg = {}
         if self.manager is not None and getattr(self.manager, "config", None):
             cfg = self.manager.config.get("screenshot", {}) or {}
 
-        output_dir = cfg.get("output_dir") or DEFAULT_SCREENSHOT_DIR
+        configured_dir = cfg.get("output_dir") or DEFAULT_SCREENSHOT_DIR
 
         # 相对路径按 cwd 解析；os.path.join 遇到绝对路径会自动丢弃前面的 cwd
-        if not os.path.isabs(output_dir):
-            output_dir = os.path.join(os.getcwd(), output_dir)
+        if not os.path.isabs(configured_dir):
+            configured_dir = os.path.join(os.getcwd(), configured_dir)
 
-        return os.path.normpath(output_dir)
+        return os.path.normpath(configured_dir)
 
     async def run(self, path: Optional[str] = None, full_page: bool = False,
-                  return_base64: bool = False) -> SkillResult:
+                  return_base64: bool = False,
+                  output_dir: Optional[str] = None) -> SkillResult:
         """
         截取页面截图
 
-        所有截图统一保存到 config.yaml 中 screenshot.output_dir 指定的目录
-        （默认 DEFAULT_SCREENSHOT_DIR）。调用方传入的 path 只取 basename 作为
-        文件名，防止因传入 "./xxx.png" 或绝对路径导致截图散落到 cwd 或其它位置。
+        所有截图统一保存到 output_dir（若显式传入）或 config.yaml 中
+        screenshot.output_dir 指定的目录（默认 DEFAULT_SCREENSHOT_DIR）。
+        调用方传入的 path 只取 basename 作为文件名，防止因传入 "./xxx.png"
+        或绝对路径导致截图散落到 cwd 或其它位置。
 
         Args:
-            path: 保存文件名（可选；只取 basename，目录由配置决定）
+            path: 保存文件名（可选；只取 basename，目录由 output_dir/配置决定）
             full_page: 是否截取全页
             return_base64: 是否返回 base64 编码
+            output_dir: 显式指定输出目录（可选；必须位于允许的工作区内）
         """
         page = await self.get_page()
 
-        # 统一目录：来自 config.yaml 的 screenshot.output_dir（相对路径按 cwd 解析）
-        output_dir = self._resolve_screenshot_dir()
-        os.makedirs(output_dir, exist_ok=True)
+        # 统一目录：显式 output_dir 优先，否则用 config 的 screenshot.output_dir
+        try:
+            target_dir = self._resolve_screenshot_dir(output_dir)
+        except ArtifactPathError as e:
+            return SkillResult(
+                success=False,
+                message=f"Invalid screenshot output_dir: {e}",
+                error=str(e),
+            )
+        os.makedirs(target_dir, exist_ok=True)
 
         # 文件名：调用方只决定文件名（取 basename），目录固定
         if path:
@@ -171,7 +194,7 @@ class ScreenshotSkill(BaseSkill):
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"screenshot_{timestamp}.png"
 
-        path = os.path.join(output_dir, filename)
+        path = os.path.join(target_dir, filename)
 
         try:
             screenshot_bytes = await page.screenshot(full_page=full_page, path=path)

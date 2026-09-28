@@ -2,8 +2,9 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 import asyncio
+import os
 import time
 
 from playwright.async_api import Page, BrowserContext
@@ -305,3 +306,100 @@ class BaseSkill(ABC):
             SkillResult: 执行结果
         """
         pass
+
+
+# ============================================================
+# 产物路径边界校验
+#
+# 目的：让“批量执行用例”时截图/录制/报告能跟着被测项目走，
+#       同时不允许模型通过参数把文件写到工作区之外。
+# 设计取舍：只做路径归属校验，不做请求级上下文（不引入 ContextVar/项目标记文件）。
+# ============================================================
+
+DEFAULT_ALLOWED_ROOTS = (".",)
+
+
+class ArtifactPathError(ValueError):
+    """产物路径越界（不属于任何允许根）"""
+
+
+def normalize_abs_path(path: str, base_dir: Optional[str] = None) -> str:
+    """把路径规范化为绝对路径（相对路径按 base_dir/cwd 解析，并解析符号链接）"""
+    raw = os.path.expanduser(str(path))
+    if not os.path.isabs(raw):
+        raw = os.path.join(base_dir or os.getcwd(), raw)
+    return os.path.realpath(raw)
+
+
+def resolve_allowed_roots(config: Optional[Dict[str, Any]] = None,
+                          base_dir: Optional[str] = None) -> List[str]:
+    """
+    计算产物允许根目录（绝对路径列表，已去重）。
+
+    规则（保持向后兼容）：
+    1. 基准根：MCP server 的工作目录（base_dir，缺省 os.getcwd()）。
+    2. config['artifact_routing']['allowed_roots']：缺省 ["."]，相对 base_dir 解析。
+    3. 既有绝对路径配置：screenshot.output_dir / agent.record_dir 为绝对路径时，
+       视为额外允许根 —— 旧版本允许把截图/录制目录配到工作区之外，不能因为加校验而失效。
+    """
+    base = normalize_abs_path(base_dir or os.getcwd())
+    roots: List[str] = [base]
+
+    cfg = config or {}
+    routing = cfg.get("artifact_routing") or {}
+    configured = routing.get("allowed_roots")
+    if not isinstance(configured, (list, tuple)) or not configured:
+        configured = list(DEFAULT_ALLOWED_ROOTS)
+    for item in configured:
+        if isinstance(item, str) and item.strip():
+            roots.append(normalize_abs_path(item.strip(), base))
+
+    for section, key in (("screenshot", "output_dir"), ("agent", "record_dir")):
+        value = (cfg.get(section) or {}).get(key)
+        if isinstance(value, str) and value.strip():
+            expanded = os.path.expanduser(value.strip())
+            if os.path.isabs(expanded):
+                roots.append(normalize_abs_path(expanded, base))
+
+    seen = set()
+    result: List[str] = []
+    for root in roots:
+        key_root = os.path.normcase(root)
+        if key_root not in seen:
+            seen.add(key_root)
+            result.append(root)
+    return result
+
+
+def is_within_roots(path: str, roots: List[str], base_dir: Optional[str] = None) -> bool:
+    """判断 path 是否位于任一允许根之内（含与根相等的情况）。
+
+    处理 `..`、不同盘符、Windows 大小写与符号链接（两侧都做 realpath）。
+    """
+    if not path or not roots:
+        return False
+    target = os.path.normcase(normalize_abs_path(path, base_dir))
+    for root in roots:
+        root_key = os.path.normcase(normalize_abs_path(root, base_dir))
+        if target == root_key:
+            return True
+        try:
+            if os.path.commonpath([target, root_key]) == root_key:
+                return True
+        except ValueError:
+            # 不同盘符（无公共路径），继续尝试下一个允许根
+            continue
+    return False
+
+
+def ensure_within_roots(path: str, roots: List[str], label: str = "path",
+                        base_dir: Optional[str] = None) -> str:
+    """校验路径在允许根内并返回其规范化绝对路径，越界时抛 ArtifactPathError。"""
+    resolved = normalize_abs_path(path, base_dir)
+    if not is_within_roots(resolved, roots, base_dir):
+        raise ArtifactPathError(
+            f"{label} 不在允许的工作区内: {resolved} "
+            f"（允许根: {', '.join(roots)}；如需放开，请在配置的 "
+            f"artifact_routing.allowed_roots 中追加目录）"
+        )
+    return resolved

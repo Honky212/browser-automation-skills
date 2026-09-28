@@ -1,0 +1,57 @@
+cline 里面配置MCP：
+{
+    "browser-automation-skills": {
+      "transport": {
+        "type": "stdio",
+        "command": "D:\\browser_automation_skills\\.venv\\Scripts\\python.exe",
+        "args": [
+          "D:\\browser_automation_skills\\start_mcp.py",
+          "--headed"
+        ],
+        "env": {
+          "PLAYWRIGHT_BROWSERS_PATH": "d:\\browser_automation_skills\\.playwright-browsers"
+        }
+      },
+      "disabled": false,
+      "autoApprove": [],
+      "timeout": 60
+    }
+  }
+}
+
+trae 里面配置MCP：
+{
+  "mcpServers": {
+    "browser-automation-skills": {
+      "command": "d:\\browser_automation_skills\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "browser_automation_skills.mcp_server",
+        "--headed"
+      ],
+      "cwd": "d:\\browser_automation_skills",
+      "env": {
+        "PLAYWRIGHT_BROWSERS_PATH": "d:\\browser_automation_skills\\.playwright-browsers"
+      }
+    }
+  }
+}
+
+codebuddy 里面配置MCP：
+{
+  "mcpServers": {
+    "browser-automation-skills": {
+      "command": "D:\\browser_automation_skills\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-m",
+        "browser_automation_skills.mcp_server",
+        "--headed"
+      ],
+      "cwd": "D:\\browser_automation_skills",
+      "env": {
+        "PLAYWRIGHT_BROWSERS_PATH": "D:\\browser_automation_skills\\.playwright-browsers"
+      },
+      "disabled": false
+    }
+  }
+}

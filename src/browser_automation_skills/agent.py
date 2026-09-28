@@ -1,6 +1,7 @@
 """Agent 层模块 - 提供自然语言任务自动规划和执行"""
 
 import asyncio
+import itertools
 import json
 import logging
 import os
@@ -11,10 +12,22 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Protocol
 from pathlib import Path
 
-from .base import BaseSkill, SkillResult
+from .base import (
+    ArtifactPathError,
+    BaseSkill,
+    SkillResult,
+    ensure_within_roots,
+    normalize_abs_path,
+    resolve_allowed_roots,
+)
 from .manager import SkillManager
 
 logger = logging.getLogger(__name__)
+
+# 自动报告文件名的唯一性来源：
+# Windows 上 time.time() 的时钟粒度约 15.6ms，同一毫秒内的两次调用会返回相同值，
+# 仅靠「时间戳 + 微秒」会生成同名报告（互相覆盖）。因此叠加进程号 + 进程内递增序号。
+_REPORT_SEQ = itertools.count(1)
 
 
 # ============================================================
@@ -216,6 +229,7 @@ class BatchTestResult:
     stop_reason: str = ""
     start_time: Optional[float] = None
     end_time: Optional[float] = None
+    report_path: Optional[str] = None   # 报告实际写入的绝对路径（调用 generate_report 后可用）
 
     @property
     def pass_rate(self) -> float:
@@ -240,6 +254,14 @@ class BatchTestResult:
             self.consecutive_failures += 1
 
     def generate_report(self, output_path: Optional[str] = None) -> str:
+        """生成 Markdown 报告。
+
+        返回值是报告**内容**（保持既有调用方语义不变）；实际写入的绝对路径记录在
+        self.report_path，供工具响应返回真实落盘位置。
+
+        output_path 的父目录会自动创建；文件名无扩展名时补 .md。
+        （路径是否位于允许工作区内，由调用方 ExecuteBatchTestCasesSkill 校验。）
+        """
         report_lines = [
             "# 批量测试报告",
             "",
@@ -290,6 +312,15 @@ class BatchTestResult:
         if evidence_lines:
             report_lines.extend(["## 断言证据", ""] + evidence_lines)
 
+        # 失败截图：写入截图技能实际返回的落盘路径，便于人工复核失败现场
+        # （与 SkillResult.data['path'] 一致，不再依赖拼接出的预期路径）
+        shot_lines: List[str] = []
+        for case in self.case_results:
+            if case.screenshots:
+                shot_lines.append(f"- {case.test_case_id}: " + "; ".join(case.screenshots))
+        if shot_lines:
+            report_lines.extend(["## 失败截图", ""] + shot_lines + [""])
+
         # 执行模式与审计：确定性执行 / 是否使用了 audit 类降级技能（如 execute_js）
         audit_lines: List[str] = []
         for case in self.case_results:
@@ -334,8 +365,17 @@ class BatchTestResult:
 
         report = "\n".join(report_lines)
         if output_path:
-            with open(output_path, "w", encoding="utf-8") as f:
+            target = os.path.abspath(str(output_path))
+            # 与 Markdown 内容保持一致：无扩展名时补 .md
+            if not os.path.splitext(target)[1]:
+                target += ".md"
+            parent = os.path.dirname(target)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            with open(target, "w", encoding="utf-8") as f:
                 f.write(report)
+            self.report_path = target
+            logger.info("批量测试报告已写入 %s", target)
         return report
 
 
@@ -1271,13 +1311,31 @@ class BatchTestAgent:
             logger.debug("用例页面隔离失败（沿用当前页）：%s", e)
 
     async def _capture_failure_screenshot(self, case: TestCase) -> List[str]:
-        """失败截图（带异常保护，截图失败不影响用例结果）"""
+        """失败截图（带异常保护，截图失败不影响用例结果）
+
+        显式把 self.screenshot_dir 传给 screenshot 技能，并记录技能**实际**返回的
+        落盘路径。旧实现只调用 manager.execute("screenshot", path=...)，
+        screenshot 技能会忽略传入路径中的目录部分（只取 basename），
+        一旦 self.screenshot_dir 与技能解析出的目录不一致，报告里记录的路径
+        就会与真实文件位置不符。
+        """
         screenshots: List[str] = []
         try:
-            path = os.path.join(self.screenshot_dir, f"{case.id}_failure.png")
-            screenshot_result = await self.manager.execute("screenshot", path=path)
+            expected_path = os.path.join(self.screenshot_dir, f"{case.id}_failure.png")
+            screenshot_result = await self.manager.execute(
+                "screenshot",
+                path=expected_path,
+                output_dir=self.screenshot_dir,
+            )
             if screenshot_result.success:
-                screenshots.append(path)
+                actual_path = ""
+                if isinstance(screenshot_result.data, dict):
+                    actual_path = screenshot_result.data.get("path") or ""
+                screenshots.append(actual_path or expected_path)
+            else:
+                logger.debug(
+                    "失败截图未成功（忽略）：%s", screenshot_result.message
+                )
         except Exception as e:
             logger.debug("失败截图失败（忽略）：%s", e)
         return screenshots
@@ -1916,20 +1974,55 @@ class ExecuteBatchTestCasesSkill(BaseSkill):
         max_steps_per_case: int = 20,
         max_retries_per_case: int = 3,
         screenshot_on_failure: bool = True,
+        artifact_root: Optional[str] = None,
     ) -> SkillResult:
+        """
+        批量执行用例文件。
+
+        Args:
+            file_path: 用例文件路径（必须位于允许的工作区内）
+            report_path: 报告写入路径；缺省时自动写入 <产物根>/reports/*.md
+            artifact_root: 产物根目录；缺省为**用例文件所在目录**，
+                截图写入 <产物根>/screenshots，录制动作写入 <产物根>/recorded_actions
+
+        路径越界时不读取用例、不创建目录、不启动 Agent，直接返回失败。
+        """
+        # ---------- 产物路径路由：先校验，越界即拒绝 ----------
+        config = getattr(self.manager, "config", None) or {}
+        allowed_roots = resolve_allowed_roots(config)
+        try:
+            case_file = ensure_within_roots(file_path, allowed_roots, label="file_path")
+            artifact_dir = ensure_within_roots(
+                artifact_root or os.path.dirname(case_file),
+                allowed_roots,
+                label="artifact_root",
+            )
+            report_target = self._resolve_report_target(
+                report_path, artifact_dir, case_file, allowed_roots
+            )
+        except ArtifactPathError as e:
+            logger.warning("批量执行被拒绝（产物路径越界）：%s", e)
+            return SkillResult(success=False, message=str(e), error=str(e))
+
+        if not os.path.isfile(case_file):
+            return SkillResult(success=False, message=f"Test case file not found: {case_file}")
+
+        screenshot_dir = os.path.join(artifact_dir, "screenshots")
+        record_dir = os.path.join(artifact_dir, "recorded_actions")
+
         try:
             if file_type:
                 suffix = file_type.lower()
                 if suffix not in {"yaml", "yml", "json", "xls", "xlsx"}:
                     return SkillResult(success=False, message=f"Unsupported file_type: {file_type}")
                 if suffix in {"yaml", "yml"}:
-                    test_cases = TestCaseParser.from_yaml(file_path)
+                    test_cases = TestCaseParser.from_yaml(case_file)
                 elif suffix == "json":
-                    test_cases = TestCaseParser.from_json(file_path)
+                    test_cases = TestCaseParser.from_json(case_file)
                 else:
-                    test_cases = TestCaseParser.from_excel(file_path, sheet_name=sheet_name)
+                    test_cases = TestCaseParser.from_excel(case_file, sheet_name=sheet_name)
             else:
-                test_cases = TestCaseParser.from_file(file_path, sheet_name=sheet_name)
+                test_cases = TestCaseParser.from_file(case_file, sheet_name=sheet_name)
         except Exception as e:
             return SkillResult(success=False, message=f"Failed to parse test case file: {str(e)}", error=str(e))
 
@@ -1943,25 +2036,71 @@ class ExecuteBatchTestCasesSkill(BaseSkill):
             max_steps_per_case=max_steps_per_case,
             max_retries_per_case=max_retries_per_case,
             screenshot_on_failure=screenshot_on_failure,
+            screenshot_dir=screenshot_dir,
+            record_dir=record_dir,
         )
 
         batch_result = await agent.execute_batch(test_cases)
-        if report_path:
-            batch_result.generate_report(report_path)
+
+        report_error = ""
+        try:
+            batch_result.generate_report(report_target)
+        except Exception as e:
+            report_error = str(e)
+            logger.warning("批量测试报告写入失败（不影响用例结果）：%s", e)
 
         success = batch_result.failed == 0
+        data: Dict[str, Any] = {
+            "total": batch_result.total,
+            "passed": batch_result.passed,
+            "failed": batch_result.failed,
+            "pass_rate": batch_result.pass_rate,
+            "duration": batch_result.duration,
+            # 真实落盘路径（不是原始入参）；报告写入失败时为 None
+            "report_path": batch_result.report_path,
+            "artifact_root": artifact_dir,
+            "screenshot_dir": screenshot_dir,
+            "record_dir": record_dir,
+        }
+        if report_error:
+            data["report_error"] = report_error
+
         return SkillResult(
             success=success,
             message=f"Batch execution completed: {batch_result.passed}/{batch_result.total} passed",
-            data={
-                "total": batch_result.total,
-                "passed": batch_result.passed,
-                "failed": batch_result.failed,
-                "pass_rate": batch_result.pass_rate,
-                "duration": batch_result.duration,
-                "report_path": report_path,
-            },
+            data=data,
         )
+
+    def _resolve_report_target(
+        self,
+        report_path: Optional[str],
+        artifact_root: str,
+        case_file: str,
+        allowed_roots: List[str],
+    ) -> str:
+        """
+        确定报告写入路径。
+
+        - 显式 report_path：解析为绝对路径，必须位于允许的工作区内；无扩展名时补 .md。
+        - 缺省 / None / 空字符串：自动生成
+          <产物根>/reports/<用例文件名>_report_<时间戳>_<pid>_<序号>.md，
+          序号保证同一进程内绝不重名，进程号区分并发 server。
+        """
+        if report_path and str(report_path).strip():
+            target = ensure_within_roots(
+                str(report_path).strip(), allowed_roots, label="report_path"
+            )
+            if not os.path.splitext(target)[1]:
+                target += ".md"
+            return target
+
+        stem = os.path.splitext(os.path.basename(case_file))[0] or "batch"
+        stamp = (
+            time.strftime("%Y%m%d_%H%M%S")
+            + f"_{os.getpid() % 100000:05d}"
+            + f"_{next(_REPORT_SEQ):03d}"
+        )
+        return os.path.join(artifact_root, "reports", f"{stem}_report_{stamp}.md")
 
     def _get_llm_client(self):
         """获取 LLM 客户端（委托公共函数）"""

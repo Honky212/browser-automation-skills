@@ -1,6 +1,5 @@
 """测试 BrowserAgent 防环机制（对应问题 #7 修复）"""
 
-import asyncio
 import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
@@ -23,7 +22,7 @@ class TestLoopDetection:
             use_cache=False,
         )
 
-    def test_allows_repeated_operation_within_limit(self, skill_manager, mock_page):
+    async def test_allows_repeated_operation_within_limit(self, skill_manager, mock_page):
         """测试允许在阈值内的重复操作（如翻页）"""
         agent = self._create_agent(skill_manager, max_repeats=3)
 
@@ -50,14 +49,14 @@ class TestLoopDetection:
         original_execute = skill_manager.execute
         skill_manager.execute = AsyncMock(return_value=SkillResult(success=True, message="ok"))
 
-        result = asyncio.get_event_loop().run_until_complete(agent.execute_task("test"))
+        result = await agent.execute_task("test")
 
         assert result.success is True
         assert call_count["plan"] == 3  # 2 次操作 + 1 次 done
 
         skill_manager.execute = original_execute
 
-    def test_detects_loop_after_max_repeats(self, skill_manager, mock_page):
+    async def test_detects_loop_after_max_repeats(self, skill_manager, mock_page):
         """测试连续重复超过阈值时判定为死循环"""
         agent = self._create_agent(skill_manager, max_repeats=3)
 
@@ -79,13 +78,13 @@ class TestLoopDetection:
 
         skill_manager.execute = AsyncMock(return_value=SkillResult(success=True, message="ok"))
 
-        result = asyncio.get_event_loop().run_until_complete(agent.execute_task("test"))
+        result = await agent.execute_task("test")
 
         assert result.success is False
         assert "Loop detected" in result.error
         assert "repeated" in result.error
 
-    def test_different_operations_reset_counter(self, skill_manager, mock_page):
+    async def test_different_operations_reset_counter(self, skill_manager, mock_page):
         """测试不同操作重置连续重复计数"""
         agent = self._create_agent(skill_manager, max_repeats=3)
 
@@ -110,12 +109,12 @@ class TestLoopDetection:
         agent._get_page_state = mock_get_page_state
         skill_manager.execute = AsyncMock(return_value=SkillResult(success=True, message="ok"))
 
-        result = asyncio.get_event_loop().run_until_complete(agent.execute_task("test"))
+        result = await agent.execute_task("test")
 
         assert result.success is True
         assert plan_count["n"] == 4  # 3 次操作 + 1 次 done
 
-    def test_max_steps_limit(self, skill_manager, mock_page):
+    async def test_max_steps_limit(self, skill_manager, mock_page):
         """测试达到最大步数限制"""
         agent = self._create_agent(skill_manager, max_repeats=100)  # 高阈值避免触发防环
 
@@ -133,7 +132,7 @@ class TestLoopDetection:
         skill_manager.execute = AsyncMock(return_value=SkillResult(success=True, message="ok"))
 
         agent.max_steps = 3
-        result = asyncio.get_event_loop().run_until_complete(agent.execute_task("test"))
+        result = await agent.execute_task("test")
 
         assert result.success is False
         assert "Max steps" in result.error

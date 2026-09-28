@@ -1,7 +1,13 @@
 # -*- coding: utf-8 -*-
-"""端到端测试：通过 stdio 驱动 MCP server，调 screenshot 工具，验证截图落到 ./screenshots/。
+"""端到端脚本（需手动运行，非 pytest 用例）：通过 stdio 驱动 MCP server，
+调 screenshot 工具，验证截图落到工作区的 ./screenshots/。
 
 故意用 path="./probe.png"（带 ./ 前缀）——这是旧代码下会散落到 cwd（项目根）的场景。
+
+    python tests/test_screenshot_path.py
+
+路径说明：不硬编码 .venv / 工作区路径，解释器统一用当前解释器，
+工作区从本文件位置逐级向上查找含 config/config.yaml 的目录。
 """
 import asyncio
 import json
@@ -9,10 +15,21 @@ import os
 import sys
 from pathlib import Path
 
-ROOT = Path(r"d:\browser_automation_skills")
-PYTHON = str(ROOT / ".venv" / "Scripts" / "python.exe")
+
+def _find_workspace_root() -> Path:
+    here = Path(__file__).resolve()
+    for base in [here.parent, *here.parents, Path.cwd()]:
+        if (base / "config" / "config.yaml").exists():
+            return base
+    return Path.cwd()
+
+
+ROOT = _find_workspace_root()
+PYTHON = sys.executable
 ENV = dict(os.environ)
-ENV["PLAYWRIGHT_BROWSERS_PATH"] = str(ROOT / ".playwright-browsers")
+_browsers_dir = ROOT / ".playwright-browsers"
+if _browsers_dir.exists() and "PLAYWRIGHT_BROWSERS_PATH" not in ENV:
+    ENV["PLAYWRIGHT_BROWSERS_PATH"] = str(_browsers_dir)
 
 PROBE_FILENAME = "probe.png"
 PROBE_REL = f"./{PROBE_FILENAME}"        # 故意带 ./ 前缀
@@ -23,9 +40,10 @@ DIR_PROBE = EXPECTED_DIR / PROBE_FILENAME  # 应该出现这里
 
 async def read_response(proc, expected_id, timeout=90):
     """从 stdout 读 JSON-RPC，跳过通知/日志，只返回 id 匹配的响应。"""
-    deadline = asyncio.get_event_loop().time() + timeout
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
     while True:
-        remaining = deadline - asyncio.get_event_loop().time()
+        remaining = deadline - loop.time()
         if remaining <= 0:
             raise TimeoutError(f"timeout waiting for id={expected_id}")
         line = await asyncio.wait_for(proc.stdout.readline(), timeout=remaining)
