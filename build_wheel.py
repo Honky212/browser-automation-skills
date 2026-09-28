@@ -15,8 +15,8 @@ build_wheel.py —— 从 src/browser_automation_skills 构建 wheel
     python build_wheel.py --exclude docs    # 追加要排除的顶层目录（可重复）
 
 打包范围说明:
-    默认排除包内顶层 `resources/`（best_practices.md、test_case_templates/*.json 等
-    文档与示例素材，非运行时代码，也没有任何模块 import 它）。
+    默认排除包内顶层 `resources/`（best_practices.md 等文档与示例素材，
+    非运行时代码，也没有任何模块 import 它）。
     被排除的目录只影响**该层同名目录**，不会误伤子包里的同名文件夹。
 
 构建产物:
