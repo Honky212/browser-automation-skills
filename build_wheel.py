@@ -18,6 +18,8 @@ build_wheel.py —— 从 src/browser_automation_skills 构建 wheel
     默认排除包内顶层 `resources/`（best_practices.md 等文档与示例素材，
     非运行时代码，也没有任何模块 import 它）。
     被排除的目录只影响**该层同名目录**，不会误伤子包里的同名文件夹。
+    许可与声明文件（LICENSE / LICENSE-COMMERCIAL.md / NOTICE）会从项目根
+    复制进 `<dist-info>/licenses/`，并在 METADATA 中以 License-File 声明。
 
 构建产物:
     <output>/browser_automation_skills-<version>-py3-none-any.whl
@@ -43,13 +45,19 @@ DIST_INFO_PREFIX = "browser_automation_skills"  # dist-info 目录前缀（Name 
 # 默认不打包的包内顶层目录（文档/示例素材，非运行时代码）
 DEFAULT_EXCLUDED_DIRS = ("resources",)
 
+# 随 wheel 分发的许可与声明文件（源文件在项目根，打包进 <dist-info>/licenses/）
+LICENSE_FILES = ("LICENSE", "LICENSE-COMMERCIAL.md", "NOTICE")
+
 # METADATA 元数据（Version 用占位符，长描述在结尾追加）
 METADATA_HEADER = """Metadata-Version: 2.4
 Name: browser-automation-skills
 Version: {version}
 Summary: AI-driven browser automation testing framework based on Playwright + LLM. 70+ reusable MCP Skills for web navigation, form filling, assertions, AI agent execution, and visual analysis.
 Author:  Honky212
-License-Expression: Apache-2.0
+License-Expression: PolyForm-Noncommercial-1.0.0
+License-File: LICENSE
+License-File: LICENSE-COMMERCIAL.md
+License-File: NOTICE
 Project-URL: Homepage, https://github.com/Honky212/browser-automation-skills
 Project-URL: Documentation, https://github.com/Honky212/browser-automation-skills#readme
 Project-URL: Issues, https://github.com/Honky212/browser-automation-skills/issues
@@ -166,6 +174,15 @@ def build_wheel(version: str, output_dir: Path, excluded_dirs=None) -> Path:
         (info_dir / "WHEEL").write_text(WHEEL_METADATA, encoding="utf-8", newline="\n")
         (info_dir / "entry_points.txt").write_text(ENTRY_POINTS, encoding="utf-8", newline="\n")
         (info_dir / "top_level.txt").write_text(TOP_LEVEL, encoding="utf-8", newline="\n")
+
+        # 2.1) 许可与声明文件（PEP 639：放进 <dist-info>/licenses/，
+        #      并在 METADATA 中以 License-File 声明，保证使用者能拿到条款全文）
+        licenses_dir = info_dir / "licenses"
+        licenses_dir.mkdir()
+        for name in LICENSE_FILES:
+            src = ROOT / name
+            if src.exists():
+                shutil.copy2(src, licenses_dir / name)
 
         # 3) 生成 RECORD
         lines = []

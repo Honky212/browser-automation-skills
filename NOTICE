@@ -1,7 +1,44 @@
 browser-automation-skills
-Copyright 2026  Honky212 contributors
+Copyright (c) 2026 Honky212 (https://github.com/Honky212/browser-automation-skills)
 
-This product is licensed under the Apache License, Version 2.0.
-You may obtain a copy of the License at:
+Required Notice: Copyright (c) 2026 Honky212
+(https://github.com/Honky212/browser-automation-skills)
 
-    http://www.apache.org/licenses/LICENSE-2.0
+------------------------------------------------------------------------
+许可（自 v1.6.0 起）
+------------------------------------------------------------------------
+本项目采用「非商业免费 + 商业付费授权」的双重许可模式：
+
+1. 非商业使用：按 PolyForm Noncommercial License 1.0.0 免费使用、修改、
+   分发（个人学习、研究、实验、教学、非营利组织、政府机构等），
+   条款全文见 LICENSE。
+
+2. 商业使用：任何商业目的的使用都必须事先获得**书面商业授权**，
+   授权可能需要支付许可费。详见 LICENSE-COMMERCIAL.md。
+
+依据 PolyForm Noncommercial License 1.0.0 的 Notices 条款，你在分发本软件
+（含修改版）时必须一并提供：
+  - 本许可条款或其 URL：https://polyformproject.org/licenses/noncommercial/1.0.0
+  - 上面那行以 `Required Notice:` 开头的版权声明
+
+------------------------------------------------------------------------
+历史版本许可说明（本次变更不溯及既往）
+------------------------------------------------------------------------
+- v1.5.5、v1.5.6：以 Apache License 2.0 发布
+- v1.5.4 及更早：以 MIT License 发布
+- v1.6.0 起：PolyForm Noncommercial License 1.0.0
+上述历史版本已授予的权利（含当时允许的商业使用）仍然有效，
+不因本次许可变更而收回。
+
+------------------------------------------------------------------------
+第三方组件许可（按其各自条款，本项目仅声明依赖关系）
+------------------------------------------------------------------------
+- Playwright  — Apache License 2.0
+- mcp         — MIT License
+- PyYAML      — MIT License
+- openai      — Apache License 2.0
+- openpyxl    — MIT License
+
+以上第三方组件由各自著作权人授权，本项目不对其主张任何权利，
+使用本项目时请同时遵守它们的许可条款。
+

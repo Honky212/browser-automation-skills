@@ -360,3 +360,35 @@ python -m browser_automation_skills.examples.batch_run_example --parse-only
 
 各客户端的具体配置形状（Cline 的 `cwd` 嵌在 `transport` 内、Trae CN / CodeBuddy 用扁平结构）
 见 `docs/教你如何使用browser_automation_skills的全部功能.md` 第 4 章。
+
+## 许可与商业授权
+
+本项目自 **v1.6.0** 起采用「**非商业免费 + 商业付费授权**」模式，
+许可条款为 **PolyForm Noncommercial License 1.0.0**（⚠️ 非 OSI 认可的开源许可）。
+
+| 用途 | 是否需要商业授权 |
+|---|---|
+| 个人学习、练手、兴趣爱好 | ❌ 免费 |
+| 学术研究、教学、实验验证 | ❌ 免费 |
+| 慈善机构 / 教育机构 / 公立科研 / 公共安全卫生 / 环保组织 / 政府机构 | ❌ 免费 |
+| 采购前的评估与试用 | ❌ 免费（合理范围内） |
+| 公司内部业务使用、内部工具 | ✅ **需先取得书面商业授权** |
+| 为客户交付、外包实施、产品集成、SaaS 服务 | ✅ **需先取得书面商业授权** |
+
+- 许可条款全文：[LICENSE](LICENSE)
+- 商业授权说明与申请流程：[LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md)
+- 版权与第三方声明：[NOTICE](NOTICE)
+
+分发本软件（含修改版）时，必须一并提供许可条款（或其 URL）以及下面这行必留声明：
+
+```text
+Required Notice: Copyright (c) 2026 Honky212
+(https://github.com/Honky212/browser-automation-skills)
+```
+
+> **历史版本不受本次变更影响**：v1.5.5 / v1.5.6 以 Apache License 2.0 发布、
+> v1.5.4 及更早以 MIT License 发布，这些版本已授予的权利（含当时允许的商业使用）
+> 仍然有效，不因本次许可变更而收回。
+
+**第三方依赖**（Playwright、mcp、PyYAML、openai、openpyxl）均为宽松许可，
+按其各自条款授权，详见 [NOTICE](NOTICE)。

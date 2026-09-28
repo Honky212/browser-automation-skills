@@ -1,6 +1,6 @@
 """Browser-Automation-Skills - 自动化测试 Skills 框架"""
 
-__version__ = "1.5.6"
+__version__ = "1.6.0"
 from .base import BaseSkill, SkillResult
 from .manager import SkillManager
 from .reporter import TestReporter
