@@ -189,4 +189,3 @@ browser-automation-mcp --headed
 ```
 
 它会从 stdin 读 JSON-RPC、stdout 输出，方便手动测试。
-```

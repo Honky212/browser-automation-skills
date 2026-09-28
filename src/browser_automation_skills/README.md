@@ -48,66 +48,53 @@ vision:
 
 ### 运行示例
 
-```bash
-# 基本浏览器操作
-python examples/basic_test.py
+```powershell
+# ① 批量测试可运行示例（默认用例为确定性 actions，不调用 LLM）
+python -m browser_automation_skills.examples.batch_run_example
 
-# 表单测试
-python examples/form_test.py
+# ② 只解析用例、打印概要（不启动浏览器，可用于冒烟）
+python -m browser_automation_skills.examples.batch_run_example --parse-only
 
-# 报告生成
-python examples/report_demo.py
+# ③ 跑自己的用例并指定报告（--headed 显示浏览器窗口）
+python -m browser_automation_skills.examples.batch_run_example --cases my_cases.yaml --report reports/my_report.md --headed
 
-# 增强 Skills 演示
-python examples/enhanced_skills_demo.py
-
-# 高级用法（自定义 Skill、Page Object、数据驱动）
-python examples/advanced_usage.py
+# ④ 启动 MCP server（供 AI 客户端调用，列出 74 个工具）
+python -m browser_automation_skills.mcp_server --headed
 ```
+
+> 完整使用指南见 `docs/教你如何使用browser_automation_skills的全部功能.md`；
+> `examples/` 内含 4 篇示例文档与 `test_case_templates/` 用例模板。
 
 ## 项目结构
 
 ```
-browser-use-skill/
-├── browser_automation_skills/             # Skills 核心模块（主包）
-│   ├── __init__.py                        # 导出 + create_manager() 工厂函数
-│   ├── base.py                            # BaseSkill 抽象类 + SkillResult
-│   ├── manager.py                         # SkillManager 注册/执行引擎
-│   ├── browser_skills.py                  # 浏览器操作 Skills (20 个 + 标签页 5 个)
-│   ├── form_skills.py                     # 表单操作 Skills (12 个)
-│   ├── assertion_skills.py                # 断言 Skills (17 个)
-│   ├── popup_skills.py                    # 弹窗/iframe Skills (10 个)
-│   ├── dom_snapshot.py                    # DOM 索引化 Skills (3 个)
-│   ├── agent.py                           # AI Agent + 批量测试
-│   │   ├── BrowserAgent                   #   自然语言任务执行
-│   │   ├── BatchTestAgent                 #   批量测试引擎
-│   │   ├── TestCaseParser                 #   用例解析 (JSON/YAML/Excel)
-│   │   ├── ExecuteTaskSkill               #   单任务 Skill
-│   │   └── ExecuteBatchTestCasesSkill     #   批量任务 Skill
-│   ├── vision.py                          # 多模态视觉 Skills
-│   │   ├── OpenAIVisionAdapter            #   OpenAI 适配器
-│   │   ├── DashScopeVisionAdapter         #   DashScope 适配器
-│   │   ├── DummyVisionAdapter             #   测试用虚拟适配器
-│   │   ├── ScreenshotVisionSkill          #   Base64 截图
-│   │   └── AnalyzePageSkill               #   页面视觉分析
-│   ├── performance.py                     # 缓存 + 性能监控
-│   ├── reporter.py                        # HTML/JSON 测试报告
-│   └── screenshot_manager.py              # 截图管理
-├── mcp_server.py                          # MCP 服务入口（源码位于根目录；v1.5.0 wheel 中已移入包内）
-├── browser_launcher.py                    # 浏览器启动器（源码位于根目录；v1.5.0 wheel 中已移入包内）
-├── config/
-│   └── config.yaml                        # 统一配置（不入包，仅模板入包）
-├── docs/                                  # 文档
-│   ├── getting_started.md
-│   ├── api_reference.md
-│   └── mcp_usage.md
-├── examples/                              # 示例文档与用例模板
-├── tests/                                 # 单元测试
-├── resources/                             # 资源文档与用例模板
-├── build_wheel_v150.py                    # v1.5.0 staging 构建脚本
-├── dist/                                  # 构建产物（.whl）
-└── README.md
+browser_automation_skills/                     # 包目录（安装后在 site-packages 下）
+├── __init__.py                        # 导出 + create_manager() / create_enhanced_manager()
+├── base.py                            # BaseSkill 抽象类 + SkillResult + 产物路径工具
+├── manager.py                         # SkillManager 注册/执行引擎
+├── browser_skills.py                  # 浏览器操作 20 个 + 标签页 5 个
+├── form_skills.py                     # 表单操作 12 个
+├── assertion_skills.py                # 断言 17 个
+├── popup_skills.py                    # 弹窗/iframe 10 个
+├── dom_snapshot.py                    # DOM 索引化 3 个
+├── agent.py                           # BrowserAgent / BatchTestAgent / TestCaseParser
+│                                      #   + ExecuteTaskSkill / ExecuteBatchTestCasesSkill
+├── vision.py                          # 多模态视觉（OpenAI / DashScope / Dummy 适配器）
+├── mcp_server.py                      # MCP 服务入口（暴露 74 个工具）
+├── browser_launcher.py                # Playwright 启动器
+├── performance.py                     # 缓存 + 性能监控
+├── promote.py                         # 录制动作 → 用例 YAML 固化（CLI）
+├── reporter.py                        # HTML/JSON 测试报告
+├── screenshot_manager.py              # 截图归档管理
+├── config.template.yaml               # 配置模板（复制为 config/config.yaml 后填写）
+├── docs/                              # 文档（含《教你如何使用…全部功能.md》）
+├── examples/                          # 示例文档 + test_case_templates/ 用例模板
+├── tests/                             # 单元测试（pytest）
+└── resources/                         # 参考资料
 ```
+
+> 构建脚本 `build_wheel.py` 与运行配置 `config/config.yaml` 位于**项目根（工作区）**而非包内；
+> 包内 `config.template.yaml` 是可直接复制使用的模板。
 
 > **v1.5.0 wheel 布局**：自 v1.5.0 起，wheel 采用单一顶层包设计——`mcp_server.py`、`browser_launcher.py`、`docs/`、`examples/`、`tests/`、`resources/` 及配置模板等数据文件全部位于 `browser_automation_skills` 包内。安装后的使用方式：
 >
@@ -312,19 +299,19 @@ python -m browser_automation_skills.promote --cases <cases.yaml> --with-assertio
 
 ## 运行测试
 
-```bash
-# 运行所有测试
-python run_tests.py
+```powershell
+# 跑全部测试（138 项；不联网、不启动浏览器）
+python -m pytest -q
 
-# 有头模式（可见浏览器）
-python run_tests.py --headed
+# 只跑某个文件
+python -m pytest tests/test_manager.py -v
 
-# 慢动作模式（调试用）
-python run_tests.py --slow-mo 500
-
-# 生成 HTML 报告
-python run_tests.py --html
+# 只解析用例走一遍（冒烟）
+python -m browser_automation_skills.examples.batch_run_example --parse-only
 ```
+
+> 需要真实浏览器的两个脚本（`tests/test_install.py`、`tests/test_screenshot_path.py`）不会被 pytest 自动收集，需手动运行：
+> `python tests/test_install.py`
 
 ## 文档
 
@@ -348,22 +335,28 @@ python run_tests.py --html
 - [x] 性能优化（缓存 + LRU）
 - [x] MCP Server 集成
 
-## MCP配置：
-将安装目录下的 `playwright-browsers` 目录添加到环境变量 `PLAYWRIGHT_BROWSERS_PATH` 中，即可在 MCP 中使用。
+## MCP 配置
+
+> 关键三条：① 用 `-m browser_automation_skills.mcp_server` 启动（**不要**写 `mcp_server.py` 文件路径）；
+> ② `command` 指向装了本包的解释器；③ `cwd` 指向工作区根（配置文件与产物路径都以它为基准）。
+
 ```json
 {
   "mcpServers": {
     "browser-automation-skills": {
-      "command": "D:\\browser_automation_skills\\.venv\\Scripts\\python.exe",
-      "args": [
-        "-m",
-        "browser_automation_skills.mcp_server",
-        "--headed"
-      ],
-      "cwd": "d:\\browser_automation_skills",
+      "command": "<你的venv>\\Scripts\\python.exe",
+      "args": ["-m", "browser_automation_skills.mcp_server", "--headed"],
+      "cwd": "<工作区根>",
       "env": {
-        "PLAYWRIGHT_BROWSERS_PATH": "d:\\browser_automation_skills\\.playwright-browsers"
+        "BROWSER_AUTOMATION_SKILLS_CONFIG": "<工作区根>\\config\\config.yaml"
       }
     }
   }
 }
+```
+
+一般**不需要**设 `PLAYWRIGHT_BROWSERS_PATH`（默认走 `%LOCALAPPDATA%\ms-playwright`）；
+只有自定义浏览器目录时才需要设置，且必须与 `playwright install` 时指向同一处。
+
+各客户端的具体配置形状（Cline 的 `cwd` 嵌在 `transport` 内、Trae CN / CodeBuddy 用扁平结构）
+见 `docs/教你如何使用browser_automation_skills的全部功能.md` 第 4 章。

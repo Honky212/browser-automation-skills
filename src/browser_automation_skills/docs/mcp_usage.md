@@ -64,67 +64,24 @@ Cline 会自动调用 MCP 工具来完成这些操作。
 填写 #username 输入框为 admin
 ```
 
-## 可用的 MCP 工具列表
+## 可用的 MCP 工具列表（共 74 个）
 
-### 浏览器操作 (12个)
-| 工具名 | 功能 | 参数 |
-|--------|------|------|
-| `navigate` | 导航到 URL | `url`, `wait_until` |
-| `click` | 点击元素 | `selector` |
-| `screenshot` | 截图 | `path`, `full_page` |
-| `wait_for_element` | 等待元素 | `selector`, `timeout` |
-| `get_text` | 获取文本 | `selector` |
-| `get_page_info` | 获取页面信息 | - |
-| `reload` | 刷新页面 | - |
-| `go_back` | 后退 | - |
-| `go_forward` | 前进 | - |
-| `wait` | 等待 | `seconds` |
-| `get_attribute` | 获取属性 | `selector`, `attribute` |
+| 分类 | 数量 | 工具 |
+|---|---|---|
+| 浏览器操作 | 20 | `navigate` `click` `screenshot` `wait_for_element` `get_text` `get_attribute` `get_page_info` `get_current_page_info` `execute_js` `get_html` `scroll_into_view` `scroll_to` `focus` `blur` `double_click` `right_click` `wait` `reload` `go_back` `go_forward` |
+| 标签页管理 | 5 | `open_new_tab` `close_tab` `switch_tab` `get_tabs` `close_other_tabs` |
+| 表单操作 | 12 | `fill_input` `type_text` `select_option` `check_checkbox` `uncheck_checkbox` `upload_file` `fill_form` `submit_form` `clear_input` `hover` `press_key` `set_date` |
+| 断言验证 | 17 | `text_equals` `text_contains` `element_exists` `element_not_exists` `element_visible` `element_enabled` `element_disabled` `url_contains` `url_equals` `title_contains` `title_equals` `page_contains_text` `element_has_class` `element_selected` `attribute_equals` `count_elements` `checkbox_checked` |
+| 弹窗 / iframe | 10 | `get_popup_pages` `switch_to_popup` `wait_for_popup` `click_in_popup` `fill_in_popup` `select_in_popup` `get_text_in_popup` `close_popup` `handle_iframe` `click_and_wait_popup` |
+| DOM 索引 | 3 | `get_dom_snapshot` `click_by_index` `fill_by_index` |
+| AI Agent | 2 | `execute_task` `execute_batch_testcases` |
+| 多模态视觉 | 2 | `screenshot_vision` `analyze_page` |
+| 缓存 / 性能 | 2 | `get_cache_stats` `clear_cache` |
+| 链式执行 | 1 | `execute_chain` |
 
-### 标签页管理 (5个)
-| 工具名 | 功能 | 参数 |
-|--------|------|------|
-| `open_new_tab` | 打开新标签页 | `url` |
-| `close_tab` | 关闭标签页 | `page_index` |
-| `switch_tab` | 切换标签页 | `page_index` |
-| `get_tabs` | 获取所有标签页 | - |
-| `close_other_tabs` | 关闭其他标签页 | `keep_index` |
-
-### 表单操作 (11个)
-| 工具名 | 功能 | 参数 |
-|--------|------|------|
-| `fill_input` | 填写输入框 | `selector`, `value`, `clear` |
-| `type_text` | 逐字输入 | `selector`, `text`, `delay` |
-| `select_option` | 选择下拉选项 | `selector`, `value/label/index` |
-| `check_checkbox` | 勾选复选框 | `selector` |
-| `uncheck_checkbox` | 取消勾选 | `selector` |
-| `upload_file` | 上传文件 | `selector`, `file_path` |
-| `fill_form` | 批量填写表单 | `fields` |
-| `submit_form` | 提交表单 | `submit_selector` |
-| `clear_input` | 清空输入框 | `selector` |
-| `hover` | 鼠标悬停 | `selector` |
-| `press_key` | 按键 | `key`, `selector` |
-
-### 断言 Skills (13个)
-| 工具名 | 功能 | 参数 |
-|--------|------|------|
-| `text_equals` | 断言文本相等 | `selector`, `expected` |
-| `text_contains` | 断言文本包含 | `selector`, `expected` |
-| `element_exists` | 断言元素存在 | `selector` |
-| `element_not_exists` | 断言元素不存在 | `selector` |
-| `element_visible` | 断言元素可见 | `selector` |
-| `element_enabled` | 断言元素可用 | `selector` |
-| `element_disabled` | 断言元素禁用 | `selector` |
-| `url_contains` | 断言 URL 包含 | `expected` |
-| `url_equals` | 断言 URL 相等 | `expected` |
-| `attribute_equals` | 断言属性相等 | `selector`, `attribute`, `expected` |
-| `count_elements` | 断言元素数量 | `selector`, `expected_count` |
-| `checkbox_checked` | 断言复选框勾选 | `selector` |
-
-### 链式执行
-| 工具名 | 功能 | 参数 |
-|--------|------|------|
-| `execute_chain` | 执行多个操作 | `steps` (数组) |
+> 本表只列工具名。**每个工具的完整参数、默认值与可选枚举**以客户端里展开看到的 schema 为准
+> （它由框架从技能签名自动生成），也可查 `SKILL.md` 或
+> `docs/教你如何使用browser_automation_skills的全部功能.md` 第 8 章。
 
 ## 使用示例
 
@@ -167,11 +124,14 @@ Cline：
 
 ## 注意事项
 
-1. **选择器**：使用 CSS 选择器，如 `#id`, `.class`, `tag[attr=value]`
-2. **超时**：默认超时 10 秒，可根据需要调整
-3. **截图**：截图会保存到指定路径，不指定则只返回 base64
-4. **多标签页**：标签页索引从 0 开始
-5. **浏览器模式**：默认无头模式（不可见），可加 `--headed` 参数显示浏览器窗口
+1. **选择器**：CSS 选择器（`#id`、`.class`、`tag[attr=value]`）或 XPath；定位不稳时改用 DOM 索引三件套（`get_dom_snapshot` + `click_by_index` / `fill_by_index`）。
+2. **超时**：各技能默认值不同（页面操作 5~30 秒，展开工具 schema 可见），单次调用还受 `skill_timeout.per_skill_seconds` 约束。
+3. **截图**：**始终落盘**。目录由 `screenshot.output_dir`（默认 `./screenshots`，相对 server 的 cwd）或 `output_dir` 参数决定；
+   传入的 `path` **只作文件名**，其中的目录部分会被忽略。需要 base64 时另加 `return_base64=true`。
+4. **多标签页**：索引从 0 开始，参数名是 `page_index`（不是 `index`）。
+5. **浏览器模式**：默认无头（不可见），加 `--headed` 显示窗口。
+6. **上下文隔离**：同一个 server 的所有请求共享一个浏览器实例与页面，不要并发驱动同一页面；
+   需要硬隔离请配置多个 server 条目。
 
 ## 故障排除
 

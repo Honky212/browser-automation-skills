@@ -561,3 +561,4 @@ screenshot_mgr.save_screenshot(
 
 # 获取失败截图
 failed = screenshot_mgr.get_failed_screenshots()
+```

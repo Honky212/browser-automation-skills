@@ -42,10 +42,10 @@ browser-automation-skills 是一个基于 **Playwright + LLM** 的浏览器自�
 |-------|------|------|
 | `navigate` | 导航到指定 URL | `url`, `wait_until` |
 | `click` | 点击页面元素 | `selector` |
-| `screenshot` | 截取页面截图 | `path`, `full_page` |
+| `screenshot` | 截取页面截图 | `path`, `full_page`, `return_base64`, `output_dir` |
 | `wait_for_element` | 等待元素出现 | `selector`, `timeout` |
 | `get_text` | 获取元素文本 | `selector` |
-| `get_attribute` | 获取元素属性 | `selector`, `name` |
+| `get_attribute` | 获取元素属性 | `selector`, `attribute` |
 | `get_page_info` | 获取页面 URL、标题 | — |
 | `get_current_page_info` | 获取当前页上下文信息 | — |
 | `execute_js` | 执行页面 JavaScript | `script` |
@@ -65,10 +65,10 @@ browser-automation-skills 是一个基于 **Playwright + LLM** 的浏览器自�
 | Skill | 功能 | 参数 |
 |-------|------|------|
 | `open_new_tab` | 打开新标签页 | `url`, `wait_until` |
-| `close_tab` | 关闭指定标签页 | `index` |
-| `switch_tab` | 切换到指定标签页 | `index` |
+| `close_tab` | 关闭指定标签页 | `page_index`（从 0 开始） |
+| `switch_tab` | 切换到指定标签页 | `page_index`（从 0 开始） |
 | `get_tabs` | 获取所有标签页信息 | — |
-| `close_other_tabs` | 关闭其他标签页 | — |
+| `close_other_tabs` | 关闭其他标签页 | `keep_index` |
 
 ### 表单操作（12 个）
 | Skill | 功能 | 参数 |
@@ -80,11 +80,11 @@ browser-automation-skills 是一个基于 **Playwright + LLM** 的浏览器自�
 | `uncheck_checkbox` | 取消勾选复选框 | `selector` |
 | `upload_file` | 上传文件（自动适配多种上传场景） | `selector`(可选), `file_path`, `button_text`(可选), `multiple`, `upload_trigger` |
 | `fill_form` | 批量填写表单 | `fields` (dict) |
-| `submit_form` | 提交表单 | `selector` |
+| `submit_form` | 提交表单 | `submit_selector`（可选；也可传 `form_selector`） |
 | `clear_input` | 清空输入框 | `selector` |
 | `hover` | 鼠标悬停 | `selector` |
 | `press_key` | 模拟按键 | `key` |
-| `set_date` | 设置日期控件 | `selector`, `date` |
+| `set_date` | 设置日期控件 | `selector`, `value` |
 
 ### 断言（17 个）
 | Skill | 功能 | 参数 |
@@ -100,9 +100,9 @@ browser-automation-skills 是一个基于 **Playwright + LLM** 的浏览器自�
 | `url_equals` | 断言 URL 等于指定值 | `expected` |
 | `title_contains` | 断言标题包含指定字符串 | `expected` |
 | `title_equals` | 断言标题等于指定值 | `expected` |
-| `page_contains_text` | 断言页面包含指定文本 | `expected` |
+| `page_contains_text` | 断言页面包含指定文本 | `text` |
 | `attribute_equals` | 断言属性等于指定值 | `selector`, `name`, `expected` |
-| `count_elements` | 断言元素数量 | `selector`, `expected` |
+| `count_elements` | 断言元素数量 | `selector`, `expected_count` |
 | `checkbox_checked` | 断言复选框已勾选 | `selector` |
 | `element_has_class` | 断言元素包含指定 class | `selector`, `class_name` |
 | `element_selected` | 断言元素已选中 | `selector` |
@@ -111,15 +111,15 @@ browser-automation-skills 是一个基于 **Playwright + LLM** 的浏览器自�
 | Skill | 功能 | 参数 |
 |-------|------|------|
 | `get_popup_pages` | 获取所有弹窗页面 | — |
-| `switch_to_popup` | 切换到弹窗页面 | `index` |
-| `wait_for_popup` | 等待弹窗出现 | `timeout` |
-| `click_in_popup` | 在弹窗中点击元素 | `selector` |
+| `switch_to_popup` | 切换到弹窗页面 | `page_index` 或 `url_contains` |
+| `wait_for_popup` | 等待弹窗出现 | `url_contains`, `title_contains`, `timeout`, `min_pages` |
+| `click_in_popup` | 在弹窗中点击元素 | `selector`, `page_index` |
 | `fill_in_popup` | 在弹窗中填写输入框 | `selector`, `value` |
-| `select_in_popup` | 在弹窗中选择下拉选项 | `selector`, `value` |
-| `get_text_in_popup` | 获取弹窗中元素文本 | `selector` |
-| `close_popup` | 关闭弹窗 | `index` |
-| `handle_iframe` | 在 iframe 中操作 | `selector`, `action`, `params` |
-| `click_and_wait_for_popup` | 点击并等待弹窗 | `selector`, `timeout` |
+| `select_in_popup` | 在弹窗中选择下拉选项 | `selector`, `value`/`label`/`index` |
+| `get_text_in_popup` | 获取弹窗中元素文本 | `selector`, `page_index` |
+| `close_popup` | 关闭弹窗 | `page_index` 或 `url_contains` |
+| `handle_iframe` | 在 iframe 中操作 | `selector`, `action`, `inner_selector`, `value` |
+| `click_and_wait_popup` | 点击并等待弹窗 | `selector`, `url_contains`, `title_contains`, `timeout` |
 
 ### DOM 索引操作（3 个）
 通过给 DOM 元素打索引号来操作，无需手写 CSS 选择器。
@@ -239,7 +239,7 @@ agent:
 | Skill | 功能 | 参数 |
 |-------|------|------|
 | `execute_task` | 接收自然语言任务，AI 自动规划并执行 | `task` (str), `max_steps`, `max_retries` |
-| `execute_batch_testcases` | 从文件批量导入并执行测试用例 | `file_path` (str), `file_type`, `sheet_name`, `report_path` |
+| `execute_batch_testcases` | 从文件批量导入并执行测试用例 | `file_path` (str), `file_type`, `sheet_name`, `report_path`, `artifact_root`, `max_steps_per_case`, `max_retries_per_case`, `screenshot_on_failure` |
 
 ### Python 编程使用
 
@@ -466,7 +466,7 @@ Agent 会调用 `execute_batch_testcases(file_path="d:/test_cases.xlsx")`。
 | Skill | 功能 | 参数 |
 |-------|------|------|
 | `get_cache_stats` | 获取缓存统计信息 | — |
-| `clear_cache` | 清除所有缓存 | — |
+| `clear_cache` | 清除所有缓存 | `cache_type`（all/dom/llm） |
 
 框架内置三级缓存：
 - **DOM 快照缓存**：避免重复获取页面 DOM，TTL 60 秒

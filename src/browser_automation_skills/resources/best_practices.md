@@ -40,8 +40,9 @@ await manager.execute("wait_for_element", selector="#btn", timeout=10000)
 # 等待网络空闲
 await manager.execute("navigate", url="https://example.com", wait_until="networkidle")
 
-# 等待特定条件
-await manager.execute("wait_for_function", script="return document.readyState === 'complete'")
+# 自定义条件：用 execute_js 读取页面状态
+# （execute_js 属 audit 类技能，使用后会在报告的「执行模式与审计」中披露）
+state = await manager.execute("execute_js", script="return document.readyState")
 ```
 
 ### 避免方式
@@ -94,12 +95,21 @@ await manager.execute("execute_chain", steps=[
 ])
 ```
 
-### 3. 并行测试
+### 3. 批量执行（框架自带）
 ```python
-# 使用 BatchExecutor 并行执行
-executor = BatchExecutor(parallel=True, max_workers=3)
-result = executor.run_from_file("test_cases.xlsx")
+# 从文件批量执行并生成报告（等价于 MCP 工具 execute_batch_testcases）
+result = await manager.execute(
+    "execute_batch_testcases",
+    file_path="test_cases.xlsx",
+    report_path="reports/run.md",
+)
+
+# 命令行方式（不受 MCP 客户端单次请求超时限制，推荐跑长批次）
+#   python -m browser_automation_skills.examples.batch_run_example --cases test_cases.xlsx --report reports/run.md
 ```
+
+> ⚠️ 本框架**没有**并行执行器：一个 MCP server 对应一个浏览器实例，多个请求共享同一页面，
+> 并发驱动会互相干扰。需要硬隔离请配多个 server 条目，或把用例串行执行。
 
 ## 六、安全实践
 
@@ -138,8 +148,8 @@ result = executor.run_from_file("test_cases.xlsx")
 # GitHub Actions 示例
 - name: Run Tests
   run: |
-    python -m pytest tests/
-    python batch_runner.py --input test_cases.xlsx --output report.html
+    python -m pytest tests/ -q
+    python -m browser_automation_skills.examples.batch_run_example --cases test_cases.xlsx --report reports/run.md
 
 - name: Upload Report
   uses: actions/upload-artifact@v4
