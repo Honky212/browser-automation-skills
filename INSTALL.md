@@ -1,14 +1,14 @@
 # Browser-Automation-Skills 安装说明
 
-> 版本：`browser-automation_skills-1.5.1`
-> 此版本已修复 1.5.0 在 Trae / Claude Code / Cline / CodeBuddy 等 MCP 客户端里
+> 版本：`browser-automation_skills-1.6.1`
+> 此版本包含启动失败时的资源清理与浏览器集成测试等改进。
 > "工具列表为空 / No tools yet" 的问题。请用这个 whl，不要用旧的 1.5.0。
 
 ---
 
 ## 0. 你会拿到什么
 
-- `browser_automation_skills-1.5.1-py3-none-any.whl`（本包）
+- `browser_automation_skills-1.6.1-py3-none-any.whl`（本包）
 - 本安装说明
 
 配置模板（`config.template.yaml`）和 MCP 配置示例（`mcp_config.json`）包里自带，
@@ -38,7 +38,7 @@ python -m venv .venv
 ### 2.2 安装 whl（会自动装依赖）
 
 ```powershell
-pip install browser_automation_skills-1.5.1-py3-none-any.whl
+pip install browser_automation_skills-1.6.1-py3-none-any.whl
 ```
 
 依赖会自动装：`playwright>=1.40.0`、`mcp>=1.0.0,<2.0.0`、`pyyaml>=6.0`、`openai>=1.0.0`、`openpyxl>=3.0.0`。
@@ -187,7 +187,7 @@ cache:
 ## 5. 验证装好了
 
 在客户端里该 server 应显示 **74 个工具**（navigate / click / screenshot / ... / execute_chain）。
-若仍显示 "No tools yet"，确认你装的是 **1.5.1** 而非 1.5.0：
+若仍显示 "No tools yet"，确认已安装当前发布的 **1.6.1**：
 
 ```powershell
 pip show browser-automation-skills
@@ -199,7 +199,7 @@ pip show browser-automation-skills
 
 | 现象 | 原因 / 解决 |
 | --- | --- |
-| 工具列表为空 / No tools yet | 装成 1.5.0 了，重装 1.5.1：`pip install --force-reinstall --no-deps browser_automation_skills-1.5.1-py3-none-any.whl` |
+| 工具列表为空 / No tools yet | 重装 1.6.1：`pip install --force-reinstall --no-deps browser_automation_skills-1.6.1-py3-none-any.whl` |
 | 调浏览器工具报找不到浏览器 | 没装 Playwright 浏览器：跑 `playwright install chromium` |
 | `execute_task` / `analyze_page` 报 401 / 无 key | `config.yaml` 里 `agent.api_key` / `vision.api_key` 没填 |
 | 用包里的 `mcp_config.json` 启动报错 | 那是旧示例（用 `mcp_server.py` 文件路径），改用第 4 节的 `-m` 方式 |

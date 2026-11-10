@@ -62,49 +62,56 @@ class BrowserLauncher:
         Returns:
             BrowserContext: 浏览器上下文
         """
-        self._playwright = await async_playwright().start()
+        try:
+            self._playwright = await async_playwright().start()
 
-        # 构建启动参数
-        launch_args = list(self.extra_args) + ['--start-maximized']
-        if self.disable_automation:
-            launch_args.append('--disable-blink-features=AutomationControlled')
+            # 构建启动参数
+            launch_args = list(self.extra_args) + ['--start-maximized']
+            if self.disable_automation:
+                launch_args.append('--disable-blink-features=AutomationControlled')
 
-        launch_kwargs = {
-            "headless": self.headless,
-            "args": launch_args,
-        }
-        if self.executable_path:
-            launch_kwargs["executable_path"] = self.executable_path
+            launch_kwargs = {
+                "headless": self.headless,
+                "args": launch_args,
+            }
+            if self.executable_path:
+                launch_kwargs["executable_path"] = self.executable_path
 
-        browser_launcher = getattr(self._playwright, self.browser_type)
-        self._browser = await browser_launcher.launch(**launch_kwargs)
+            browser_launcher = getattr(self._playwright, self.browser_type)
+            self._browser = await browser_launcher.launch(**launch_kwargs)
 
-        # 构建上下文参数
-        context_kwargs = {}
-        if self.user_agent:
-            context_kwargs["user_agent"] = self.user_agent
+            # 构建上下文参数
+            context_kwargs = {}
+            if self.user_agent:
+                context_kwargs["user_agent"] = self.user_agent
 
-        # 无头模式：使用配置的 viewport；有头模式：不限制 viewport 让页面自适应
-        if self.headless:
-            context_kwargs["viewport"] = self.viewport
-        else:
-            context_kwargs["no_viewport"] = True
+            # 无头模式：使用配置的 viewport；有头模式：不限制 viewport 让页面自适应
+            if self.headless:
+                context_kwargs["viewport"] = self.viewport
+            else:
+                context_kwargs["no_viewport"] = True
 
-        self._context = await self._browser.new_context(**context_kwargs)
+            self._context = await self._browser.new_context(**context_kwargs)
 
-        # 让 config.yaml 的 browser.timeout 真正生效（Playwright 默认操作超时）
-        if self.default_timeout and self.default_timeout > 0:
-            self._context.set_default_timeout(int(self.default_timeout))
+            # 让 config.yaml 的 browser.timeout 真正生效（Playwright 默认操作超时）
+            if self.default_timeout and self.default_timeout > 0:
+                self._context.set_default_timeout(int(self.default_timeout))
+                try:
+                    self._context.set_default_navigation_timeout(int(self.default_timeout))
+                except Exception:  # pragma: no cover - 兼容旧版 Playwright
+                    pass
+
+            logger.info(
+                "Browser launched: %s (headless=%s, executable_path=%s, default_timeout=%s)",
+                self.browser_type, self.headless, self.executable_path, self.default_timeout,
+            )
+            return self._context
+        except BaseException:
             try:
-                self._context.set_default_navigation_timeout(int(self.default_timeout))
-            except Exception:  # pragma: no cover - 兼容旧版 Playwright
-                pass
-
-        logger.info(
-            "Browser launched: %s (headless=%s, executable_path=%s, default_timeout=%s)",
-            self.browser_type, self.headless, self.executable_path, self.default_timeout,
-        )
-        return self._context
+                await self.close()
+            except BaseException:
+                logger.exception("Error cleaning up browser after launch failure")
+            raise
 
     async def close(self):
         """关闭浏览器（按正确顺序：context → browser → playwright，带异常保护）"""
